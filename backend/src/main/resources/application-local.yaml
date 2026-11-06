@@ -1,0 +1,9 @@
+app:
+  public-origin: ${APP_PUBLIC_ORIGIN:http://localhost:3000}
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    from: ${MAIL_FROM:no-reply@example.test}
+    tls-mode: ${SMTP_TLS_MODE:none}
+  session:
+    cookie-secure: false
