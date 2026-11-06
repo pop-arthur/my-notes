@@ -1,0 +1,813 @@
+openapi: 3.1.0
+info:
+  title: To-Do List API
+  version: 0.1.0
+  description: 'Проектный контракт, реализация ещё не начата. Google или email + пароль, личные задачи. Cookie-based
+    сессии, без JWT в localStorage. Все JSON-объекты запросов запрещают неизвестные поля. Данные пользователя
+    и токены не кэшировать (Cache-Control: no-store). Все POST/PATCH/DELETE требуют X-CSRF-TOKEN и cookie сессии,
+    включая анонимные auth-запросы; сначала GET /api/auth/csrf. На чтении защищённых ресурсов без сессии —
+    401; на изменяющем запросе с отсутствующим/неверным CSRF возможен 403 до проверки аутентификации. Production
+    только через HTTPS и один origin. API не перенаправляет на HTML-форму входа; редиректы используются только
+    в Google flow.'
+servers:
+- url: http://localhost:8080
+  description: Локальная разработка; Secure для cookie здесь отключён.
+tags:
+- name: Authentication
+  description: Email-регистрация, вход и сессии.
+- name: Google OAuth
+  description: Браузерный Google OpenID Connect flow.
+- name: Tasks
+  description: Личные задачи текущего пользователя.
+security:
+- SessionCookie: []
+paths:
+  /api/auth/csrf:
+    get:
+      tags:
+      - Authentication
+      operationId: getCsrfToken
+      summary: Получить CSRF-токен
+      description: Вызывать до первого изменяющего запроса, после входа, выхода и сброса пароля. Сохранять
+        cookie и передавать token в X-CSRF-TOKEN. После истечения сессии получить новый токен.
+      security: []
+      responses:
+        '200':
+          description: Токен и имя заголовка. Создаёт анонимную сессию при необходимости.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Csrf'
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Не кэшировать ответ.
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/register:
+    post:
+      tags:
+      - Authentication
+      operationId: register
+      summary: Зарегистрироваться с email и паролем
+      description: Создаёт неподтверждённого пользователя без входа. Токен подтверждения действует 24 часа.
+        Для занятого адреса не меняет пароль/аккаунт и не раскрывает способ входа. Повторное письмо запрашивается
+        отдельно.
+      security:
+      - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          description: Одинаковый ответ для нового и занятого адреса. Письмо подтверждения отправляется только
+            при допустимой новой регистрации.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/verify-email:
+    post:
+      tags:
+      - Authentication
+      operationId: verifyEmail
+      summary: Подтвердить email
+      description: Ссылка из письма открывает страницу frontend, которая отправляет токен в теле POST. GET
+        не погашает токен.
+      security:
+      - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '204':
+          description: Email подтверждён; токен погашен. Автоматического входа нет, далее вызвать login.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/resend-verification:
+    post:
+      tags:
+      - Authentication
+      operationId: resendVerification
+      summary: Повторить письмо подтверждения
+      description: Новый токен действует 24 часа и отзывает прежние токены подтверждения.
+      security:
+      - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          description: Одинаковый ответ для любого адреса; письмо только неподтверждённому локальному пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/login:
+    post:
+      tags:
+      - Authentication
+      operationId: login
+      summary: Войти с email и паролем
+      description: Требует подтверждённого email. Неверные логин/пароль дают общий 401. Только после проверки
+        верного пароля допустим 403 email_not_verified. При успехе заменяет текущую сессию.
+      security:
+      - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Вход выполнен. ID сессии изменён; получить новый CSRF-токен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/me:
+    get:
+      tags:
+      - Authentication
+      operationId: getCurrentUser
+      summary: Получить текущего пользователя
+      responses:
+        '200':
+          description: Пользователь текущей сессии.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Не кэшировать ответ.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/logout:
+    post:
+      tags:
+      - Authentication
+      operationId: logout
+      summary: Завершить текущую сессию
+      security:
+      - SessionCookie: []
+        CsrfToken: []
+      responses:
+        '204':
+          description: Сессия инвалидирована, cookie удалена. Получить новый CSRF-токен перед последующими
+            POST.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/forgot-password:
+    post:
+      tags:
+      - Authentication
+      operationId: forgotPassword
+      summary: Запросить восстановление пароля
+      description: Токен сброса действует 30 минут. Новый запрос отзывает прежние токены сброса. Не создаёт
+        пароль для Google-аккаунта.
+      security:
+      - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          description: Одинаковый ответ для любого адреса; письмо только подтверждённому пользователю с локальным
+            паролем.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/auth/reset-password:
+    post:
+      tags:
+      - Authentication
+      operationId: resetPassword
+      summary: Задать новый пароль по токену
+      description: Проверка и погашение токена атомарны. Автоматического входа нет. Обновить CSRF перед следующим
+        входом; если запрос выполнен из сессии другого пользователя, её не завершать.
+      security:
+      - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Пароль изменён, токены сброса погашены, все сессии пользователя отозваны. Войти заново.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /oauth2/authorization/google:
+    get:
+      tags:
+      - Google OAuth
+      operationId: startGoogleLogin
+      summary: Начать вход или регистрацию через Google
+      description: Открывать браузерной навигацией, не fetch. Запрашиваются openid email profile. Не принимает
+        произвольный returnUrl.
+      security: []
+      responses:
+        '302':
+          description: Перенаправление в Google. Сессия хранит OAuth state.
+          headers:
+            Location:
+              description: URL перенаправления.
+              schema:
+                type: string
+                format: uri-reference
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /login/oauth2/code/google:
+    get:
+      tags:
+      - Google OAuth
+      operationId: completeGoogleLogin
+      summary: Обработать callback Google
+      description: Служебный callback Spring Security, не вызывать вручную. Требует cookie исходной OAuth-сессии
+        и корректный state. Google возвращает либо code, либо error. Проверяются подпись, issuer, audience,
+        срок ID token и nonce, если он передавался; email должен быть подтверждён. Первый успешный вход создаёт
+        пользователя. Идентификатор — issuer + subject. Совпадение email с другим аккаунтом отклоняется без
+        объединения. После успеха frontend получает новый CSRF-токен. Параметры ошибок не отражаются в redirect
+        или логах.
+      security: []
+      responses:
+        '302':
+          description: 'Успех: Location=/, новая аутентифицированная сессия. Ошибка/отказ/конфликт email: Location=/login?error=oauth_failed,
+            новая аутентификация не создаётся.'
+          headers:
+            Location:
+              description: URL перенаправления.
+              schema:
+                type: string
+                format: uri-reference
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      parameters:
+      - name: code
+        in: query
+        required: false
+        description: Код Google, присутствует при успехе.
+        schema:
+          type: string
+          minLength: 1
+      - name: state
+        in: query
+        required: false
+        description: Обязателен для успешной обработки; сверяется с исходной сессией.
+        schema:
+          type: string
+          minLength: 1
+      - name: error
+        in: query
+        required: false
+        description: Ошибка или отказ Google вместо code.
+        schema:
+          type: string
+          minLength: 1
+  /api/tasks:
+    get:
+      tags:
+      - Tasks
+      operationId: listTasks
+      summary: Получить свои задачи
+      responses:
+        '200':
+          description: Только задачи текущего пользователя, createdAt DESC, затем id DESC; без задач — пустой
+            массив.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+      - Tasks
+      operationId: createTask
+      summary: Добавить задачу
+      security:
+      - SessionCookie: []
+        CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Новая невыполненная задача.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          headers:
+            Location:
+              description: Относительный путь /api/tasks/{id}.
+              schema:
+                type: string
+                format: uri-reference
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/tasks/{id}:
+    get:
+      tags:
+      - Tasks
+      operationId: getTask
+      summary: Получить свою задачу
+      responses:
+        '200':
+          description: Задача текущего пользователя.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags:
+      - Tasks
+      operationId: updateTask
+      summary: Установить признак выполнения
+      security:
+      - SessionCookie: []
+        CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Актуальное состояние задачи. Повтор того же значения сохраняет состояние.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags:
+      - Tasks
+      operationId: deleteTask
+      summary: Удалить свою задачу
+      security:
+      - SessionCookie: []
+        CsrfToken: []
+      responses:
+        '204':
+          description: Задача удалена окончательно. Повторное удаление даёт 404.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: UUID задачи. Чужая задача неотличима от отсутствующей.
+      schema:
+        type: string
+        format: uuid
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: Серверная сессия. Cookie устанавливает браузер из Set-Cookie; HttpOnly, Secure в production,
+        SameSite=Lax. Для CSRF нужна cookie той же сессии.
+    CsrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-TOKEN
+      description: Получить token из GET /api/auth/csrf, сохраняя cookie анонимной или аутентифицированной
+        сессии. Обновить после входа/выхода/сброса пароля. Не заменяет аутентификацию.
+  headers:
+    SessionCookie:
+      description: 'JSESSIONID: HttpOnly; Secure в production; SameSite=Lax; Path=/. При выходе или сбросе
+        пароля cookie удаляется. В production только HTTPS.'
+      schema:
+        type: string
+  schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Пробелы по краям удаляются. Приложение приводит адрес к нижнему регистру; точки и +suffix
+            не удаляются.
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          writeOnly: true
+          description: 12–128 символов Unicode. Пробелы не обрезаются, пароль не нормализуется и не усекается.
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Пробелы по краям удаляются. Приложение приводит адрес к нижнему регистру; точки и +suffix
+            не удаляются.
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
+    EmailRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Пробелы по краям удаляются. Приложение приводит адрес к нижнему регистру; точки и +suffix
+            не удаляются.
+    TokenRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - token
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+          writeOnly: true
+          description: Непрозрачный одноразовый токен из письма. Не записывать в логи.
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - token
+      - newPassword
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+          writeOnly: true
+          description: Непрозрачный одноразовый токен из письма. Не записывать в логи.
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 128
+          writeOnly: true
+          description: 12–128 символов Unicode. Пробелы не обрезаются, пароль не нормализуется и не усекается.
+    Message:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      properties:
+        message:
+          type: string
+          example: Если действие доступно для этого адреса, письмо будет отправлено.
+    User:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - email
+      - emailVerified
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Пробелы по краям удаляются. Приложение приводит адрес к нижнему регистру; точки и +suffix
+            не удаляются.
+        emailVerified:
+          type: boolean
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Время UTC в RFC 3339.
+    Csrf:
+      type: object
+      additionalProperties: false
+      required:
+      - headerName
+      - token
+      properties:
+        headerName:
+          type: string
+          const: X-CSRF-TOKEN
+        token:
+          type: string
+          minLength: 1
+          description: Токен текущей сессии, в том числе анонимной.
+    CreateTaskRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: \S
+          description: Удалить пробелы по краям до проверки длины; требуется хотя бы один непробельный символ.
+          example: Подготовить проект
+    UpdateTaskRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - completed
+      properties:
+        completed:
+          type: boolean
+          example: true
+    Task:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - title
+      - completed
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        completed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          description: Время UTC в RFC 3339.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Время UTC в RFC 3339.
+    TaskList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Task'
+    FieldError:
+      type: object
+      additionalProperties: false
+      required:
+      - field
+      - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    Problem:
+      type: object
+      required:
+      - type
+      - title
+      - status
+      - code
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          example: about:blank
+        title:
+          type: string
+          example: Некорректные данные
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          description: Безопасное описание без паролей, токенов, SQL и stack trace.
+        instance:
+          type: string
+          format: uri-reference
+          description: Путь запроса без секретов и query-параметров.
+        code:
+          type: string
+          description: Стабильный машинный код ошибки.
+          example: validation_failed
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+  responses:
+    BadRequest:
+      description: 'validation_failed: неверный JSON, формат или поля; invalid_token: email-токен неверен,
+        истёк или уже использован.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: BadRequest
+            status: 400
+            code: validation_failed
+    Unauthorized:
+      description: 'unauthenticated: нет действующей сессии; invalid_credentials: неверные данные входа, в
+        том числе для отсутствующего аккаунта или аккаунта только Google.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            code: unauthenticated
+    Forbidden:
+      description: 'csrf_invalid: CSRF-токен отсутствует/неверен; email_not_verified: верный пароль, но email
+        ещё не подтверждён.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            code: csrf_invalid
+    NotFound:
+      description: 'task_not_found: задача отсутствует или принадлежит другому пользователю.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: NotFound
+            status: 404
+            code: task_not_found
+    TooManyRequests:
+      description: 'rate_limited: превышен лимит запросов. Повторить после Retry-After.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: TooManyRequests
+            status: 429
+            code: rate_limited
+      headers:
+        Retry-After:
+          description: Сколько секунд подождать.
+          schema:
+            type: integer
+            minimum: 1
+    InternalError:
+      description: 'internal_error: непредвиденная ошибка, внутренние детали не раскрываются.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: InternalError
+            status: 500
+            code: internal_error
