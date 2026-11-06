@@ -10,7 +10,7 @@
 - Для браузера — серверные сессии и cookie `HttpOnly`, `Secure` в production, `SameSite=Lax`; CSRF-защита обязательна, включая вход и выход.
 - Контракт API — `docs/openapi.yaml`. При изменении поведения синхронно обновлять контракт и реализацию.
 - Базовые версии backend: Java 21, Spring Boot 4.1.2, PostgreSQL 18, Maven Wrapper 3.9.11. Совместимые версии Spring-зависимостей, Hibernate, Flyway и Testcontainers брать из dependency management Spring Boot; ArchUnit фиксировать отдельно в `backend/pom.xml`.
-- Frontend-стек пока не выбран; не вводить его зависимости в backend.
+- Frontend размещается в `frontend/`: Next.js App Router, React, TypeScript strict, Tailwind CSS, shadcn/Radix, TanStack Query, React Hook Form + Zod. Правила — `frontend/AGENTS.md`; зависимости frontend не вводить в backend.
 
 ## Коммиты
 
@@ -98,5 +98,5 @@
 - Аутентификация: Google и email + пароль с подтверждением адреса и восстановлением доступа, согласно проектному API-контракту.
 - Задачи принадлежат пользователю. Владельца определять из серверной сессии; все операции ограничивать его данными. Не принимать `userId` клиента как основание для доступа.
 - Использовать Spring Security для аутентификации. Не хранить открытые пароли, токены восстановления и секреты в логах или Git; не объединять аккаунты автоматически по совпадению email.
-- Выбор frontend-стека отложен до отдельного решения пользователя.
+- Frontend-стек выбран пользователем; следовать `frontend/AGENTS.md`.
 - Разбор требований и предлагаемые решения находятся в `docs/task-analysis.md`. Предложения не считать согласованным стеком автоматически.
