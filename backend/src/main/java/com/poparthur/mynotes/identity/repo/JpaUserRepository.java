@@ -43,7 +43,12 @@ public class JpaUserRepository implements UserRepository {
     @Transactional(propagation = Propagation.MANDATORY)
     @Override
     public Optional<UserEntity> findByIdForUpdate(UUID id) {
-        return Optional.ofNullable(entityManager.find(UserEntity.class, id, LockModeType.PESSIMISTIC_WRITE));
+        var user = entityManager.find(UserEntity.class, id, LockModeType.PESSIMISTIC_WRITE);
+        if (user != null) {
+            // A prior email lookup may have cached a snapshot from before the lock was acquired.
+            entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
+        }
+        return Optional.ofNullable(user);
     }
 
     @Transactional
@@ -52,6 +57,17 @@ public class JpaUserRepository implements UserRepository {
         entityManager.flush();
         int changed = entityManager.createQuery(
                 "update UserEntity u set u.emailVerified = true, u.updatedAt = :now where u.id = :id")
+                .setParameter("now", now).setParameter("id", id).executeUpdate();
+        entityManager.clear();
+        return changed == 1;
+    }
+    /** Caller must hold this user's write lock in the same transaction. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Override
+    public boolean incrementAuthVersion(UUID id, Instant now) {
+        entityManager.flush();
+        int changed = entityManager.createQuery(
+                "update UserEntity u set u.authVersion = u.authVersion + 1, u.updatedAt = :now where u.id = :id")
                 .setParameter("now", now).setParameter("id", id).executeUpdate();
         entityManager.clear();
         return changed == 1;

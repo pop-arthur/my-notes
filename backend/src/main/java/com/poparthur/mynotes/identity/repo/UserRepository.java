@@ -18,4 +18,7 @@ public interface UserRepository {
     Optional<UserEntity> findByIdForUpdate(UUID id);
 
     boolean confirmEmail(UUID id, Instant now);
+
+    /** Requires a writable caller transaction holding the user write lock. */
+    boolean incrementAuthVersion(UUID id, Instant now);
 }

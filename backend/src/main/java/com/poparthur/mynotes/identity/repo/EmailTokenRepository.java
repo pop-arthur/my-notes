@@ -11,6 +11,8 @@ public interface EmailTokenRepository {
     /** Insert only: an existing identifier or unique key must fail without overwriting a record. */
     EmailTokenEntity create(EmailTokenEntity entity);
 
+    Optional<EmailTokenEntity> findByHashAndPurpose(String tokenHash, TokenPurpose purpose);
+
     /** Requires a writable caller transaction; atomic consumption rolls back with that transaction. */
     Optional<EmailTokenEntity> consume(String tokenHash, TokenPurpose purpose, Instant now);
 

@@ -10,6 +10,6 @@ Backend: Java + Spring Boot + ORM + миграции. Frontend-стек пока
 - [Контракт API (OpenAPI 3.1)](docs/openapi.yaml)
 - [Правила разработки и именования коммитов](AGENTS.md)
 
-Статус: реализован backend repo-layer для задач и identity со структурой `http / service / repo` и JPA entities; HTTP API, вход и frontend ещё не реализованы. [Настройка и проверка backend](backend/README.md).
+Статус: реализованы backend repo/service layers для задач и identity со структурой `http / service / repo`; HTTP API, OAuth flow, сессии, реальная отправка писем и frontend ещё не реализованы. [Настройка и проверка backend](backend/README.md).
 
-AI-инструмент: Codex — подготовка репозитория, разбор требований, API-контракт и реализация слоя хранения с интеграционными проверками.
+AI-инструмент: Codex — подготовка репозитория, разбор требований, API-контракт и реализация слоёв хранения и бизнес-сервисов с unit- и интеграционными проверками.

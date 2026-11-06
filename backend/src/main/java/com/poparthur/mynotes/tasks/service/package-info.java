@@ -1,2 +1,2 @@
-/** Business scenarios and transaction boundaries. Coordinates repositories; independent of HTTP. */
+/** Task business scenarios and transactional ownership checks. Returns safe service results. */
 package com.poparthur.mynotes.tasks.service;

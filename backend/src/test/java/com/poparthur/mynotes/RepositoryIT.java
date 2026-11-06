@@ -59,7 +59,7 @@ class RepositoryIT {
 
     @Test
     void migrationIsRepeatableAndSchemaIsValidatedAtStartup() {
-        assertThat(flyway.info().applied()).hasSize(1);
+        assertThat(flyway.info().applied()).hasSize(2);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         flyway.validate();
     }

@@ -28,6 +28,14 @@ public class JpaEmailTokenRepository implements EmailTokenRepository {
         return entity;
     }
 
+    @Override
+    public Optional<EmailTokenEntity> findByHashAndPurpose(String tokenHash, TokenPurpose purpose) {
+        return entityManager.createQuery(
+                "select t from EmailTokenEntity t where t.tokenHash = :tokenHash and t.purpose = :purpose", EmailTokenEntity.class)
+                .setParameter("tokenHash", tokenHash).setParameter("purpose", purpose)
+                .getResultList().stream().findFirst();
+    }
+
     /** Requires a writable caller transaction; consumption rolls back with that transaction. */
     @Transactional(propagation = Propagation.MANDATORY)
     @Override

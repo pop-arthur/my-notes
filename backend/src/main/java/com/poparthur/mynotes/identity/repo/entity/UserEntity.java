@@ -26,6 +26,13 @@ public class UserEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "auth_version", nullable = false)
+    private long authVersion;
+
+    public long getAuthVersion() {
+        return authVersion;
+    }
+
     protected UserEntity() {
     }
 

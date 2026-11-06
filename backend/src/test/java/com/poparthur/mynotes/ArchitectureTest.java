@@ -27,6 +27,9 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAPackage("..repo..")
             .allowEmptyShould(true);
     @ArchTest
+    static final ArchRule serviceResultsDoNotExposePersistenceTypes = noClasses().that().resideInAPackage("..service.result..")
+            .should().dependOnClassesThat().resideInAPackage("..repo..");
+    @ArchTest
     static final ArchRule servicesDoNotDependOnJpaRepositoryImplementations = noClasses().that().resideInAPackage("..service..")
             .should().dependOnClassesThat().haveSimpleNameStartingWith("Jpa")
             .allowEmptyShould(true);
