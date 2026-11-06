@@ -142,3 +142,10 @@ my-notes-compose exec -T postgres pg_restore -U postgres \
 Публичный Worker добавляет проверяемый секрет и IP клиента; forwarded-заголовкам не доверять.
 Секрет не выводить при curl, compose config или inspect. Для end-to-end проверок использовать
 публичный сайт и CSRF одной сессии. Внешнее хранилище бэкапов пока не подключено.
+
+### SMTP egress и IPv6 контейнеров
+
+Для Gmail на текущем VPS нужен IPv6 egress: production Compose включает enable_ipv6
+для сети и preferIPv6Addresses для JVM. Backend остаётся на IPv4 loopback, БД не публикуется.
+Проверять SMTP из контейнера, а не только с хоста; Docker/UFW/TLS не отключать.
+При пересоздании сети не использовать down -v: именованный volume содержит рабочую БД.

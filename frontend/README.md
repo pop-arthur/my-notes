@@ -67,7 +67,7 @@ Vitest проверяет граничную валидацию Unicode, cookie/
 ## Ограничения интеграции
 
 - OpenAPI 0.2.0 поддерживает PATCH title/completed; frontend использует generated UpdateTaskRequest. Gateway 502 описан в контракте.
-- SMTP-адаптер реализован; production SMTP пока выключен: формы корректно показывают `503 mail_delivery_unavailable` / `mail_delivery_failed`, не подменяя их успехом.
+- Production SMTP подключён через Gmail. При недоступности отправщика формы показывают `503 mail_delivery_unavailable` / `mail_delivery_failed`, не подменяя их успехом.
 - Google требует настройки backend credentials. Без неё backend возвращает `503 google_unavailable`; браузерный обработчик возвращает пользователя на `/login?error=google_unavailable`, не показывая JSON. OAuth невозможно завершить одной настройкой frontend.
 - Figma Starter ограничил чтение части состояний. Основные экраны, палитра, шкалы, мобильные задачи и редактор получены; недоступные варианты адаптированы на основе полученных компонентов. Полное визуальное совпадение всех недоступных состояний не подтверждено.
 

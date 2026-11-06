@@ -52,7 +52,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
-      JAVA_TOOL_OPTIONS: -Xms64m -Xmx256m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:+ExitOnOutOfMemoryError
+      JAVA_TOOL_OPTIONS: -Djava.net.preferIPv6Addresses=true -Xms64m -Xmx256m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:+ExitOnOutOfMemoryError
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -73,6 +73,10 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 40s
+networks:
+  default:
+    # SMTP egress from this VPS is available over IPv6; keep IPv4 for loopback ingress.
+    enable_ipv6: true
 volumes:
   postgres_data:
     name: my-notes-postgres-data
