@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily my-notes PostgreSQL custom-format backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/my-notes-backup
+User=root
+UMask=0077

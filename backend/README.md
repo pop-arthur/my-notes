@@ -205,3 +205,9 @@ Local-профиль по умолчанию использует localhost:1025
 ### Проверки почты
 
 `./mvnw clean verify` включает тесты TLS-конфигурации, шаблонов и кодирования ссылок, выключенного sender, Google callback и SMTP-интеграцию с Mailpit v1.31.1 через Testcontainers. Проверяются регистрация → настоящее SMTP-письмо → подтверждение и восстановление → SMTP-письмо → смена пароля, а также тайм-аут SMTP, сохранение данных после сбоя и успешная повторная отправка. Реальный production SMTP и настоящий Google аккаунт требуют последующей проверки с вашими credentials и origin.
+
+## VPS / production Compose
+
+Отдельная конфигурация: `compose.vps.yaml`, multi-stage сборка — `Dockerfile`.
+Инструкция размещения, SSH-туннеля, обновления и резервного копирования: [VPS deployment](../docs/vps-deployment.md).
+Production env хранится вне Git в `/etc/my-notes/production.env`; шаблон — `deploy/.env.example`.
