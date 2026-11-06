@@ -1,22 +1,29 @@
 # Список задач
 
-Учебный веб-проект To-Do List: добавление, отметка выполнения и удаление задач с сохранением в базе данных.
+Полноценное веб-приложение по тестовому заданию: личные задачи, регистрация и адаптивный интерфейс по макетам Figma. Данные хранятся в PostgreSQL и сохраняются после обновления страницы и перезапуска сервера.
 
-Backend: Java + Spring Boot + ORM + миграции. Frontend: Next.js App Router + React + TypeScript. [Запуск frontend](frontend/README.md).
+**[Открыть сайт](https://my-notes.pop-arthur-c189baa0.workers.dev)** · **[Код на GitHub](https://github.com/pop-arthur/my-notes)**
 
-В требования добавлены вход через Google или email и личный список задач. Для email пока предполагается вход с паролем, подтверждение адреса и восстановление доступа.
+## Возможности
 
-- [Разбор задачи и план реализации](docs/task-analysis.md)
-- [Контракт API (OpenAPI 3.1)](docs/openapi.yaml)
-- [Правила разработки и именования коммитов](AGENTS.md)
+- Добавление, редактирование, отметка выполнения и удаление задач.
+- Регистрация по email, подтверждение адреса и восстановление пароля; SMTP подключён.
+- Личный список с проверкой доступа на сервере.
+- Мобильная версия, валидация форм, состояния загрузки, пустого списка и ошибок.
+- Google-вход реализован через OpenID Connect; в демо пока выключен до настройки OAuth credentials.
 
-Статус: реализованы backend HTTP API, repo/service layers, редактирование задач, Spring Security, Google OIDC и PostgreSQL-сессии. Frontend реализован; SMTP-адаптер и локальный Mailpit готовы, для production нужно задать почтовые credentials и публичный origin. [Настройка и проверка backend](backend/README.md).
+## Техническая реализация
 
-AI-инструмент: Codex — подготовка репозитория, разбор требований, API-контракт и реализация backend, HTTP/security и редактирования задач с unit- и интеграционными проверками. Также использован для frontend по Figma, API-интеграции и browser-тестов.
+**Backend:** Java 21, Spring Boot, Spring Security, JPA / Hibernate через EntityManager, PostgreSQL, Flyway. Слоистая архитектура `http → service → repo`, разделение по областям `tasks` и `identity`, принципы SOLID.
 
-Frontend реализован по доступным макетам Figma: вход/регистрация, подтверждение почты, восстановление пароля, личные задачи и встроенное редактирование. [Архитектура и расхождения Figma/API](docs/frontend-analysis.md). Доставка писем и завершение Google OAuth требуют настройки backend.
+**Frontend:** Next.js App Router, React, TypeScript strict, Tailwind CSS, shadcn/Radix, TanStack Query, React Hook Form и Zod. Типы API генерируются из OpenAPI.
 
-Сайт: https://my-notes.pop-arthur-c189baa0.workers.dev.
-Frontend опубликован в Workers, backend и БД — на VPS через закрытый Tunnel/VPC.
-Google и SMTP пока выключены до настройки внешних credentials; сейчас публичный вход недоступен.
-[Размещение и оставшиеся шаги](docs/cloudflare-deployment.md).
+**Качество:** unit- и интеграционные тесты с PostgreSQL Testcontainers, архитектурные проверки ArchUnit, браузерные тесты Playwright и сквозные сценарии с Mailpit. Серверные сессии, CSRF-защита, хеширование паролей и одноразовые email-токены.
+
+**Развёртывание:** frontend — Cloudflare Workers; backend и БД — VPS, доступ к API через закрытый Tunnel/VPC. Сайт и API работают на одном origin.
+
+## Использование AI и запуск
+
+Проект разработан с помощью **Codex**: анализ требований, проектирование API и архитектуры, реализация backend и frontend по Figma, написание тестов и настройка развёртывания.
+
+[Запуск backend](backend/README.md) · [Запуск frontend](frontend/README.md) · [OpenAPI](docs/openapi.yaml) · [Требования](docs/task-analysis.md) · [Развёртывание](docs/cloudflare-deployment.md)
