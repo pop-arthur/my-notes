@@ -17,5 +17,7 @@ public interface TaskRepository {
 
     Optional<TaskEntity> setCompleted(UUID id, UUID userId, boolean completed, Instant now);
 
+    Optional<TaskEntity> update(UUID id, UUID userId, String title, Boolean completed, Instant now);
+
     boolean deleteByIdAndUserId(UUID id, UUID userId);
 }

@@ -11,3 +11,35 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  session:
+    timeout: 30m
+    jdbc:
+      initialize-schema: never
+      cleanup-cron: "0 * * * * *"
+server:
+  forward-headers-strategy: none
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: false
+app:
+  session:
+    cookie-secure: true
+  oauth:
+    google:
+      enabled: ${GOOGLE_OAUTH_ENABLED:false}
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+      redirect-uri: ${GOOGLE_REDIRECT_URI:}
+logging:
+  level:
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.springframework.session: INFO

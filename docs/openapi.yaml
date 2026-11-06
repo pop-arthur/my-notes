@@ -1,14 +1,17 @@
 openapi: 3.1.0
 info:
   title: To-Do List API
-  version: 0.1.0
-  description: 'Проектный контракт, реализация ещё не начата. Google или email + пароль, личные задачи. Cookie-based
-    сессии, без JWT в localStorage. Все JSON-объекты запросов запрещают неизвестные поля. Данные пользователя
-    и токены не кэшировать (Cache-Control: no-store). Все POST/PATCH/DELETE требуют X-CSRF-TOKEN и cookie сессии,
-    включая анонимные auth-запросы; сначала GET /api/auth/csrf. На чтении защищённых ресурсов без сессии —
-    401; на изменяющем запросе с отсутствующим/неверным CSRF возможен 403 до проверки аутентификации. Production
-    только через HTTPS и один origin. API не перенаправляет на HTML-форму входа; редиректы используются только
-    в Google flow.'
+  version: 0.2.0
+  description: 'Реализованный HTTP API. Сессии хранятся в PostgreSQL; Google OAuth включается настройками окружения.
+    Production-почтовый адаптер пока отсутствует: почтовые сценарии без него дают 503. Google или email + пароль,
+    личные задачи. Cookie-based сессии, без JWT в localStorage. Все JSON-объекты запросов запрещают неизвестные
+    поля. Данные пользователя и токены не кэшировать (Cache-Control: no-store). Все POST/PATCH/DELETE требуют
+    X-CSRF-TOKEN и cookie сессии, включая анонимные auth-запросы; сначала GET /api/auth/csrf. На чтении защищённых
+    ресурсов без сессии — 401; на изменяющем запросе с отсутствующим/неверным CSRF возможен 403 до проверки
+    аутентификации. Production только через HTTPS и один origin. API не перенаправляет на HTML-форму входа;
+    редиректы используются только в Google flow. Тайм-аут бездействия сессии — 30 минут. Лимиты по socket IP
+    на маршрут: login/verify/reset — 20/мин, register/resend/forgot — 5/10 мин, Google start — 10/мин, CSRF
+    — 60/мин. Лимиты настраиваются и сбрасываются при перезапуске; forwarded-заголовки не используются.'
 servers:
 - url: http://localhost:8080
   description: Локальная разработка; Secure для cookie здесь отключён.
@@ -19,6 +22,8 @@ tags:
   description: Браузерный Google OpenID Connect flow.
 - name: Tasks
   description: Личные задачи текущего пользователя.
+- name: Health
+  description: Минимальное состояние приложения.
 security:
 - SessionCookie: []
 paths:
@@ -48,6 +53,8 @@ paths:
               description: Не кэшировать ответ.
         '500':
           $ref: '#/components/responses/InternalError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /api/auth/register:
     post:
       tags:
@@ -81,6 +88,8 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/auth/verify-email:
     post:
       tags:
@@ -138,6 +147,8 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/auth/login:
     post:
       tags:
@@ -251,6 +262,8 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/auth/reset-password:
     post:
       tags:
@@ -305,6 +318,8 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /login/oauth2/code/google:
     get:
       tags:
@@ -432,7 +447,7 @@ paths:
       tags:
       - Tasks
       operationId: updateTask
-      summary: Установить признак выполнения
+      summary: Изменить заголовок и/или признак выполнения
       security:
       - SessionCookie: []
         CsrfToken: []
@@ -459,6 +474,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+      description: Передать title, completed или оба поля. Пропущенные поля сохраняются; явный null, пустой
+        объект и неизвестные поля запрещены. Изменения атомарны и ограничены владельцем.
     delete:
       tags:
       - Tasks
@@ -488,6 +505,26 @@ paths:
       schema:
         type: string
         format: uuid
+  /actuator/health:
+    get:
+      tags:
+      - Health
+      operationId: getHealth
+      summary: Проверить состояние без внутренних деталей
+      security: []
+      responses:
+        '200':
+          description: Приложение работоспособно.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: Приложение или БД недоступны.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
 components:
   securitySchemes:
     SessionCookie:
@@ -653,12 +690,18 @@ components:
     UpdateTaskRequest:
       type: object
       additionalProperties: false
-      required:
-      - completed
       properties:
         completed:
           type: boolean
           example: true
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: \S
+          description: Удалить пробелы по краям до проверки длины; требуется хотя бы один непробельный символ.
+          example: Подготовить проект
+      minProperties: 1
     Task:
       type: object
       additionalProperties: false
@@ -735,6 +778,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FieldError'
+    Health:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          example: UP
   responses:
     BadRequest:
       description: 'validation_failed: неверный JSON, формат или поля; invalid_token: email-токен неверен,
@@ -811,3 +863,10 @@ components:
             title: InternalError
             status: 500
             code: internal_error
+    ServiceUnavailable:
+      description: 'mail_delivery_unavailable: почтовый адаптер не настроен; mail_delivery_failed: ошибка доставки
+        после commit; google_unavailable: Google OAuth выключен.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'

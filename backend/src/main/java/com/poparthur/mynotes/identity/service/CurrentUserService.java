@@ -27,4 +27,11 @@ public class CurrentUserService {
         }
         return IdentityResults.user(user);
     }
+    public boolean isSessionValid(UUID userId, long authVersion) {
+        if (userId == null) {
+            return false;
+        }
+        return users.findById(userId)
+                .filter(user -> user.isEmailVerified() && user.getAuthVersion() == authVersion).isPresent();
+    }
 }

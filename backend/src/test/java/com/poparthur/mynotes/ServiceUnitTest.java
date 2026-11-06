@@ -102,7 +102,7 @@ class ServiceUnitTest {
         var verification = new EmailVerificationService(users, credentials, tokenRepository, tokens,
                 delivery, validation, time, transaction);
         var recovery = new PasswordRecoveryService(users, credentials, tokenRepository, tokens,
-                delivery, validation, passwords, time, transaction);
+                delivery, validation, passwords, time, transaction, event -> {});
         assertThatThrownBy(() -> registration.register("one@example.com", "long password"))
                 .isInstanceOf(MailDeliveryUnavailableException.class);
         assertThatThrownBy(() -> verification.resend("one@example.com"))

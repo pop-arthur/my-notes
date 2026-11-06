@@ -44,11 +44,29 @@ public class JpaTaskRepository implements TaskRepository {
     @Transactional
     @Override
     public Optional<TaskEntity> setCompleted(UUID id, UUID userId, boolean completed, Instant now) {
+        return update(id, userId, null, completed, now);
+    }
+
+    @Override
+    @Transactional
+    public Optional<TaskEntity> update(UUID id, UUID userId, String title, Boolean completed, Instant now) {
+        if (title == null && completed == null) {
+            throw new IllegalArgumentException("No task fields supplied");
+        }
         entityManager.flush();
-        int changed = entityManager.createQuery(
-                "update TaskEntity t set t.completed = :completed, t.updatedAt = :now where t.id = :id and t.userId = :userId")
-                .setParameter("completed", completed).setParameter("now", now)
-                .setParameter("id", id).setParameter("userId", userId).executeUpdate();
+        String jpql = "update TaskEntity t set t.updatedAt = :now"
+                + (title == null ? "" : ", t.title = :title")
+                + (completed == null ? "" : ", t.completed = :completed")
+                + " where t.id = :id and t.userId = :userId";
+        var query = entityManager.createQuery(jpql).setParameter("now", now)
+                .setParameter("id", id).setParameter("userId", userId);
+        if (title != null) {
+            query.setParameter("title", title);
+        }
+        if (completed != null) {
+            query.setParameter("completed", completed);
+        }
+        int changed = query.executeUpdate();
         entityManager.clear();
         return changed == 0 ? Optional.empty() : findByIdAndUserId(id, userId);
     }

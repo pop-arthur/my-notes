@@ -29,11 +29,12 @@ import java.util.function.Supplier;
 import static com.poparthur.mynotes.identity.repo.entity.TokenPurpose.*;
 import static org.assertj.core.api.Assertions.*;
 
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest
 @Testcontainers
 class RepositoryIT {
     @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18").withStartupTimeout(java.time.Duration.ofSeconds(180));
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -59,7 +60,7 @@ class RepositoryIT {
 
     @Test
     void migrationIsRepeatableAndSchemaIsValidatedAtStartup() {
-        assertThat(flyway.info().applied()).hasSize(2);
+        assertThat(flyway.info().applied()).hasSize(3);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         flyway.validate();
     }

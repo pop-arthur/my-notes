@@ -9,12 +9,16 @@ import com.poparthur.mynotes.identity.service.mail.IdentityMailDelivery;
 import com.poparthur.mynotes.shared.service.InputValidation;
 import com.poparthur.mynotes.shared.service.NewTransaction;
 import com.poparthur.mynotes.shared.service.ServiceTime;
+import com.poparthur.mynotes.identity.service.event.PasswordResetCompleted;
+import com.poparthur.mynotes.identity.service.result.PasswordResetResult;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PasswordRecoveryService {
+    private final ApplicationEventPublisher events;
     private final UserRepository users;
     private final PasswordCredentialRepository credentials;
     private final EmailTokenRepository tokenRepository;
@@ -28,7 +32,8 @@ public class PasswordRecoveryService {
     public PasswordRecoveryService(UserRepository users, PasswordCredentialRepository credentials,
                                    EmailTokenRepository tokenRepository, EmailTokenService tokens,
                                    IdentityMailDelivery mail, InputValidation validation, PasswordEncoder passwords,
-                                   ServiceTime time, NewTransaction transaction) {
+                                   ServiceTime time, NewTransaction transaction, ApplicationEventPublisher events) {
+        this.events = events;
         this.users = users;
         this.credentials = credentials;
         this.tokenRepository = tokenRepository;
@@ -58,7 +63,7 @@ public class PasswordRecoveryService {
     }
 
     @Transactional
-    public void reset(String rawToken, String newPassword) {
+    public PasswordResetResult reset(String rawToken, String newPassword) {
         validation.newPassword(newPassword, "newPassword");
         String hash = passwords.encode(newPassword);
         var token = tokens.consume(rawToken, TokenPurpose.PASSWORD_RESET);
@@ -71,5 +76,8 @@ public class PasswordRecoveryService {
         if (!users.incrementAuthVersion(user.getId(), now)) {
             throw new InvalidTokenException();
         }
+        long version = users.findById(user.getId()).orElseThrow(InvalidTokenException::new).getAuthVersion();
+        events.publishEvent(new PasswordResetCompleted(user.getId(), version));
+        return new PasswordResetResult(user.getId(), version);
     }
 }

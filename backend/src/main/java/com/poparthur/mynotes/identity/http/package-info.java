@@ -1,2 +1,2 @@
-/** HTTP controllers and request/response DTOs. Calls service, never repositories directly. */
+/** Authentication REST controllers, DTOs and security integration. Does not access application repositories. */
 package com.poparthur.mynotes.identity.http;

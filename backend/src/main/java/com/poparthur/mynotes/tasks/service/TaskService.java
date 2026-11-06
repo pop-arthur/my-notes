@@ -52,9 +52,19 @@ public class TaskService {
 
     @Transactional
     public TaskResult setCompleted(UUID userId, UUID taskId, boolean completed) {
+        return update(userId, taskId, null, completed);
+    }
+
+    @Transactional
+    public TaskResult update(UUID userId, UUID taskId, String title, Boolean completed) {
         users.requireVerified(userId);
         validation.id(taskId, "taskId");
-        return result(tasks.setCompleted(taskId, userId, completed, time.now()).orElseThrow(TaskNotFoundException::new));
+        if (title == null && completed == null) {
+            throw new com.poparthur.mynotes.shared.service.exception.ValidationException("body");
+        }
+        String normalizedTitle = title == null ? null : validation.title(title);
+        return result(tasks.update(taskId, userId, normalizedTitle, completed, time.now())
+                .orElseThrow(TaskNotFoundException::new));
     }
 
     @Transactional

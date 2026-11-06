@@ -48,7 +48,7 @@
 
 ### Контракты service layer
 
-- Сервисы возвращают безопасные типы из `service.result`, а не JPA entities. Эти результаты не зависят от repo; будущий HTTP преобразует их в свои DTO.
+- Сервисы возвращают безопасные типы из `service.result`, а не JPA entities. Эти результаты не зависят от repo; HTTP преобразует их в свои DTO.
 - UUID пользователя для task-сценариев передаёт доверенная граница аутентификации, а не HTTP body. Сервисы проверяют существование и подтверждение пользователя.
 - Время получать через внедрённый `Clock` / `ServiceTime` в UTC с микросекундной точностью; идентификаторы — через `UuidGenerator`.
 - PasswordEncoder: Spring Security Crypto, DelegatingPasswordEncoder с `pbkdf2@SpringSecurity_v5_8`. Пароли не обрезать и не нормализовать; ограничения длины считать по Unicode code points.
@@ -56,8 +56,21 @@
 - При операциях email-токенов соблюдать порядок блокировок: пользователь → токен. После ожидания блокировки пользователя обновлять его состояние из БД.
 - Реальная отправка почты пока отсутствует. `IdentityMailSender` — контракт, перехватчик есть только в тестах. При отсутствии sender почтовые сценарии явно недоступны до чтения аккаунта; production no-op запрещён.
 - Выпуск токена и связанные изменения завершают свою транзакцию до вызова sender. Ошибка доставки не отменяет commit; повторная отправка выпускает новый токен. Надёжная очередь доставки пока не реализована.
-- Сброс пароля атомарно увеличивает `auth_version`. Будущая интеграция сессий обязана сверять эту версию; сейчас браузерных сессий ещё нет.
-- `VerifiedGoogleIdentity` — доверенный внутренний ввод будущего проверяющего Google ID token, не HTTP request DTO. OAuth flow и проверку JWT этим классом не заменять.
+- Сброс пароля атомарно увеличивает `auth_version`. HTTP/security-интеграция сверяет версию на каждом аутентифицированном запросе; JDBC-сессии старых версий удаляются после commit сброса.
+- `VerifiedGoogleIdentity` — доверенный внутренний ввод после проверки Google ID token Spring Security, не HTTP request DTO. OAuth flow и проверку JWT этим классом не заменять.
+
+### HTTP и сессии
+
+- HTTP реализует контракт `docs/openapi.yaml` версии 0.2.0. PATCH задачи принимает title, completed или оба поля, отклоняет пустой объект и явные null; SQL обновляет только переданные поля атомарно по ID + владельцу.
+- Spring MVC DTO отделены от service results; неизвестные JSON-поля, дубликаты полей и scalar coercion запрещены. Секреты в request/response DTO скрыты в toString.
+- Сессии — Spring Session JDBC в PostgreSQL, схема V3 применяется только Flyway. Сериализуемая SessionIdentity содержит UUID и auth version; cookie JSESSIONID, HttpOnly, SameSite=Lax, Path=/, Secure по умолчанию. Отключение Secure допустимо только с профилем local/test.
+- Вход явно применяет session fixation protection, ротацию CSRF и сохранение SecurityContext. Все POST/PATCH/DELETE требуют CSRF, включая login/register; свежий токен получают через GET /api/auth/csrf.
+- Контроллер получает владельца из principal. На каждом аутентифицированном запросе security-фильтр вызывает сервис проверки текущей auth version; repo из HTTP не вызывать.
+- Logout закрывает только текущую сессию. Reset публикует service-событие, после commit удаляются только сессии более старых версий. Текущая чужая сессия сохраняется.
+- Google OIDC выключен по умолчанию; включение требует credentials и callback URL. Проверку JWT/state/nonce выполняет Spring Security до вызова GoogleIdentityService. После входа хранится только локальная identity, не Google access/refresh/ID tokens. Редиректы фиксированы: / и /login?error=oauth_failed.
+- Ошибки контроллеров и фильтров имеют application/problem+json. Отсутствующий sender и отключённый Google дают безопасный 503, не фиктивный успех. Секреты, body и OAuth query-параметры не логировать.
+- Лимиты auth-маршрутов применяются по socket IP с bounded Caffeine cache; forwarded-заголовки не доверенные. Приложение рассчитано на один экземпляр и один origin, CORS по умолчанию закрыт.
+- /actuator/health публичен и не раскрывает компоненты/детали. API/auth ответы имеют Cache-Control: no-store.
 
 ### Production design
 

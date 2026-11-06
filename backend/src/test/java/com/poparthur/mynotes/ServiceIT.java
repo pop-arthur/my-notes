@@ -36,12 +36,13 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.*;
 
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest
 @Testcontainers
 @Import(ServiceIT.TestBeans.class)
 class ServiceIT {
     @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18").withStartupTimeout(java.time.Duration.ofSeconds(180));
     private static final Instant NOW = Instant.parse("2026-11-06T10:00:00.123456789Z");
     private static final String PASSWORD = "😀".repeat(12) + " very long password ";
     private static final String NEW_PASSWORD = "another unicode password 😀";
