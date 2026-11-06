@@ -29,7 +29,7 @@ public class RateLimitService {
                 "mail", new Policy(mail, 600), "google", new Policy(google, 60), "csrf", new Policy(csrf, 60));
     }
 
-    /** Zero means allowed; otherwise seconds until retry. Keys use the socket peer, never forwarded headers. */
+    /** Zero means allowed; otherwise seconds until retry. Keys use the socket peer or the authenticated edge client, never arbitrary forwarded headers. */
     public long acquire(String route, String peer, String group) {
         Policy policy = policies.get(group);
         Window window = windows.get(new Key(route, peer), key -> new Window());

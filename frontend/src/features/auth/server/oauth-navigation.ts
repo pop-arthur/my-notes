@@ -1,3 +1,7 @@
+import {
+  upstreamRequest,
+  type BackendEnvironment,
+} from "@/shared/api/backend-transport";
 import { ApiError } from "@/shared/api/error";
 
 type OAuthStep = "start" | "callback";
@@ -27,8 +31,10 @@ function errorRedirect(code: string, upstream?: Response, retryAt?: number) {
   return browserRedirect(`/login?${params}`, upstream);
 }
 
-function backendUrl(step: OAuthStep, request: Request) {
-  const configuredOrigin = process.env.BACKEND_ORIGIN;
+function backendUrl(step: OAuthStep, request: Request, edge = false) {
+  const configuredOrigin = edge
+    ? "http://backend.internal"
+    : process.env.BACKEND_ORIGIN;
   if (!configuredOrigin && process.env.NODE_ENV === "production") {
     throw new Error("BACKEND_ORIGIN is required for OAuth navigation");
   }
@@ -77,20 +83,37 @@ function safeDestination(location: string | null, step: OAuthStep) {
 }
 
 /** Browser navigation only. Spring still owns state, ID-token checks and authentication. */
-export async function handleOAuthNavigation(request: Request, step: OAuthStep) {
+export async function handleOAuthNavigation(
+  request: Request,
+  step: OAuthStep,
+  edge?: BackendEnvironment,
+) {
   try {
     const headers = new Headers({
       Accept: "application/json, application/problem+json",
     });
     const cookie = request.headers.get("Cookie");
     if (cookie) headers.set("Cookie", cookie);
-    const upstream = await fetch(backendUrl(step, request), {
+    const options: RequestInit = {
       method: "GET",
       headers,
       redirect: "manual",
       cache: "no-store",
       signal: AbortSignal.timeout(OAUTH_TIMEOUT_MS),
-    });
+    };
+    let upstream: Response;
+    if (edge) {
+      if (!edge.BACKEND || !edge.EDGE_PROXY_SECRET)
+        throw new Error("Missing VPC transport");
+      headers.set(
+        "CF-Connecting-IP",
+        request.headers.get("CF-Connecting-IP") ?? "",
+      );
+      const navigation = new Request(backendUrl(step, request, true), options);
+      upstream = await edge.BACKEND.fetch(
+        upstreamRequest(navigation, edge.EDGE_PROXY_SECRET),
+      );
+    } else upstream = await fetch(backendUrl(step, request), options);
     if ([301, 302, 303, 307, 308].includes(upstream.status)) {
       const destination = safeDestination(
         upstream.headers.get("Location"),

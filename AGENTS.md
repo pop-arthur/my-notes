@@ -77,7 +77,7 @@
 - Logout закрывает только текущую сессию. Reset публикует service-событие, после commit удаляются только сессии более старых версий. Текущая чужая сессия сохраняется.
 - Google OIDC выключен по умолчанию; включение требует credentials и callback URL. Проверку JWT/state/nonce выполняет Spring Security до вызова GoogleIdentityService. После входа хранится только локальная identity, не Google access/refresh/ID tokens. Редиректы фиксированы: / и /login?error=oauth_failed.
 - Ошибки контроллеров и фильтров имеют application/problem+json. Отсутствующий sender и отключённый Google дают безопасный 503, не фиктивный успех. Секреты, body и OAuth query-параметры не логировать.
-- Лимиты auth-маршрутов применяются по socket IP с bounded Caffeine cache; forwarded-заголовки не доверенные. Приложение рассчитано на один экземпляр и один origin, CORS по умолчанию закрыт.
+- Лимиты auth-маршрутов применяются по socket IP с bounded Caffeine cache; при EDGE_PROXY_SECRET допускается только числовой IP в собственном заголовке доверенного Worker. Секрет проверяется constant-time; forwarded-заголовки не доверенные. Приложение рассчитано на один экземпляр и один origin, CORS по умолчанию закрыт.
 - /actuator/health публичен и не раскрывает компоненты/детали. API/auth ответы имеют Cache-Control: no-store.
 
 ### Production design
@@ -100,3 +100,10 @@
 - Использовать Spring Security для аутентификации. Не хранить открытые пароли, токены восстановления и секреты в логах или Git; не объединять аккаунты автоматически по совпадению email.
 - Frontend-стек выбран пользователем; следовать `frontend/AGENTS.md`.
 - Разбор требований и предлагаемые решения находятся в `docs/task-analysis.md`. Предложения не считать согласованным стеком автоматически.
+
+## Размещение в Cloudflare
+
+- Frontend — Next через @opennextjs/cloudflare на стабильном workers.dev URL; API/health — VPC Service BACKEND → именованный Tunnel → loopback backend VPS. Прямой Worker fetch к IP не использовать.
+- Worker имеет доступ только к backend, не к БД/всей сети. EDGE_PROXY_SECRET — отдельный серверный секрет Worker/VPS; SMTP/Google credentials находятся только на VPS.
+- API/auth не кешировать; сохранять все Set-Cookie и CSRF, не следовать OAuth редиректам и не повторять мутации автоматически. Proxy transport находится в shared/api и используется только серверным кодом.
+- План эксплуатации и оставшиеся настройки Google/SMTP — docs/cloudflare-deployment.md. Платные ресурсы не создавать. Коммит/push выполнять отдельным запросом.

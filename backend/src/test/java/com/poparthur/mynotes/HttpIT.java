@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"app.proxy.secret=",
         "app.mail.enabled=false", "app.oauth.google.enabled=false", "app.public-origin=", "app.session.cookie-secure=false", "app.rate-limit.mail=1000", "app.rate-limit.login=1000",
         "app.rate-limit.token=1000", "app.rate-limit.google=1000", "app.rate-limit.csrf=1000"})
 @ActiveProfiles("test")

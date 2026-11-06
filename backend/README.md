@@ -211,3 +211,8 @@ Local-профиль по умолчанию использует localhost:1025
 Отдельная конфигурация: `compose.vps.yaml`, multi-stage сборка — `Dockerfile`.
 Инструкция размещения, SSH-туннеля, обновления и резервного копирования: [VPS deployment](../docs/vps-deployment.md).
 Production env хранится вне Git в `/etc/my-notes/production.env`; шаблон — `deploy/.env.example`.
+
+Cloudflare Worker подключён к приватному backend через Tunnel/VPC. EDGE_PROXY_SECRET
+защищает собственный заголовок IP; произвольные forwarded-заголовки не доверенные.
+Без секрета и числового client IP защищённый origin возвращает 403; GET health остаётся публичным.
+Подключение, секреты и Google callback: [Cloudflare deployment](../docs/cloudflare-deployment.md).

@@ -408,6 +408,23 @@ export interface components {
         };
     };
     responses: {
+        /** @description internal_error: Worker не смог получить ответ backend; операция автоматически не повторяется. */
+        BadGateway: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "type": "about:blank",
+                 *       "title": "Bad Gateway",
+                 *       "status": 502,
+                 *       "code": "internal_error"
+                 *     }
+                 */
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description validation_failed: неверный JSON, формат или поля; invalid_token: email-токен неверен, истёк или уже использован. */
         BadRequest: {
             headers: {
@@ -442,7 +459,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description csrf_invalid: CSRF-токен отсутствует/неверен; email_not_verified: верный пароль, но email ещё не подтверждён. */
+        /** @description csrf_invalid: CSRF-токен отсутствует/неверен; email_not_verified: верный пароль, но email ещё не подтверждён; access_denied: соединение не прошло проверку доверенного прокси. */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -555,6 +572,7 @@ export interface operations {
             };
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     register: {
@@ -583,6 +601,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
             503: components["responses"]["ServiceUnavailable"];
         };
     };
@@ -610,6 +629,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     resendVerification: {
@@ -638,6 +658,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
             503: components["responses"]["ServiceUnavailable"];
         };
     };
@@ -669,6 +690,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     getCurrentUser: {
@@ -693,6 +715,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     logout: {
@@ -715,6 +738,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     forgotPassword: {
@@ -743,6 +767,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
             503: components["responses"]["ServiceUnavailable"];
         };
     };
@@ -771,6 +796,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     startGoogleLogin: {
@@ -846,6 +872,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     createTask: {
@@ -876,6 +903,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     getTask: {
@@ -903,6 +931,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     deleteTask: {
@@ -929,6 +958,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     updateTask: {
@@ -961,6 +991,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+            502: components["responses"]["BadGateway"];
         };
     };
     getHealth: {
@@ -981,6 +1012,7 @@ export interface operations {
                     "application/json": components["schemas"]["Health"];
                 };
             };
+            502: components["responses"]["BadGateway"];
             /** @description Приложение или БД недоступны. */
             503: {
                 headers: {

@@ -1,0 +1,5 @@
+{
+  "name": "backend-runtime-test",
+  "main": "backend.ts",
+  "compatibility_date": "2026-11-06",
+}

@@ -208,3 +208,40 @@ describe("OAuth browser navigation", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+describe("OAuth over VPC", () => {
+  it("uses one binding call, trusted client and only callback parameters", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(null, { status: 302, headers: { Location: "/" } }),
+      );
+    const r = new Request(
+      "https://site.workers.dev/login/oauth2/code/google?code=opaque&state=opaque&returnUrl=https://evil.test",
+      {
+        headers: {
+          "CF-Connecting-IP": "2001:db8::1",
+          Cookie: "JSESSIONID=state",
+        },
+      },
+    );
+    const response = await handleOAuthNavigation(r, "callback", {
+      BACKEND: { fetch: fetcher },
+      EDGE_PROXY_SECRET: "runtime-test-secret-with-at-least-32-characters",
+    });
+    expect(response.headers.get("Location")).toBe("/");
+    expect(fetcher).toHaveBeenCalledOnce();
+    const upstream: Request = fetcher.mock.calls[0]![0];
+    expect(upstream.headers.get("X-My-Notes-Client-IP")).toBe("2001:db8::1");
+    expect(upstream.headers.get("Cookie")).toBe("JSESSIONID=state");
+    expect(upstream.redirect).toBe("manual");
+    expect(new URL(upstream.url).searchParams.has("returnUrl")).toBe(false);
+  });
+  it("fails closed for an incomplete Workers context", async () => {
+    expect(
+      (await handleOAuthNavigation(request(), "start", {})).headers.get(
+        "Location",
+      ),
+    ).toBe("/login?error=oauth_unavailable");
+  });
+});

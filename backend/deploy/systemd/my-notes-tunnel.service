@@ -1,0 +1,26 @@
+[Unit]
+Description=Cloudflare Tunnel for the private my-notes VPC service
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+ConditionPathExists=/etc/my-notes/tunnel.token
+
+[Service]
+Type=simple
+DynamicUser=yes
+LoadCredential=tunnel-token:/etc/my-notes/tunnel.token
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel --loglevel warn --metrics 127.0.0.1:2000 run --token-file ${CREDENTIALS_DIRECTORY}/tunnel-token
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Prevent an upstream failure from recording OAuth/email query strings.
+# Service lifecycle remains in the journal; connector readiness is exposed on loopback.
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

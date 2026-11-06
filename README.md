@@ -15,3 +15,8 @@ Backend: Java + Spring Boot + ORM + миграции. Frontend: Next.js App Rout
 AI-инструмент: Codex — подготовка репозитория, разбор требований, API-контракт и реализация backend, HTTP/security и редактирования задач с unit- и интеграционными проверками. Также использован для frontend по Figma, API-интеграции и browser-тестов.
 
 Frontend реализован по доступным макетам Figma: вход/регистрация, подтверждение почты, восстановление пароля, личные задачи и встроенное редактирование. [Архитектура и расхождения Figma/API](docs/frontend-analysis.md). Доставка писем и завершение Google OAuth требуют настройки backend.
+
+Сайт: https://my-notes.pop-arthur-c189baa0.workers.dev.
+Frontend опубликован в Workers, backend и БД — на VPS через закрытый Tunnel/VPC.
+Google и SMTP пока выключены до настройки внешних credentials; сейчас публичный вход недоступен.
+[Размещение и оставшиеся шаги](docs/cloudflare-deployment.md).
