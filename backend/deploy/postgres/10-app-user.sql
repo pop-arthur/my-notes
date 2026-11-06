@@ -1,0 +1,3 @@
+\getenv app_password DB_PASSWORD
+CREATE ROLE my_notes LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'app_password';
+ALTER DATABASE my_notes OWNER TO my_notes;

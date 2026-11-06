@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily my-notes PostgreSQL backup at 03:15 UTC
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 UTC
+Persistent=true
+RandomizedDelaySec=5m
+Unit=my-notes-backup.service
+
+[Install]
+WantedBy=timers.target

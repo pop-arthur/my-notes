@@ -1,0 +1,67 @@
+name: my-notes
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: my_notes
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?Set DB_ADMIN_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./deploy/postgres/10-app-user.sql:/docker-entrypoint-initdb.d/10-app-user.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d my_notes']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 192m
+    shm_size: 64m
+    command: [postgres, -c, shared_buffers=32MB, -c, max_connections=30, -c, work_mem=2MB]
+  backend:
+    image: my-notes-backend:${BACKEND_IMAGE_TAG:-vps}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      DB_URL: jdbc:postgresql://postgres:5432/my_notes
+      DB_USERNAME: my_notes
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: "true"
+      MAIL_ENABLED: "false"
+      GOOGLE_OAUTH_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: -Xms64m -Xmx256m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:+ExitOnOutOfMemoryError
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "5", http://127.0.0.1:8080/actuator/health]
+      interval: 20s
+      timeout: 6s
+      retries: 6
+      start_period: 120s
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 512m
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+volumes:
+  postgres_data:
+    name: my-notes-postgres-data
