@@ -25,7 +25,7 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"app.proxy.secret=",
         "app.mail.enabled=true", "app.mail.tls-mode=none", "app.mail.username=", "app.mail.password=",
         "app.mail.from=no-reply@example.test", "app.public-origin=https://public.example.test",
         "app.oauth.google.enabled=false", "app.session.cookie-secure=false",

@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-notes",
+  "account_id": "c189baa045430bc8f4450ef08637633c",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-06",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api",
+      "/api/*",
+      "/oauth2/*",
+      "/login/oauth2/*",
+      "/actuator/health",
+    ],
+    "html_handling": "none",
+    "not_found_handling": "none",
+  },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "my-notes" }],
+  "vpc_services": [
+    {
+      "binding": "BACKEND",
+      "service_id": "01a1b294-18ab-7ec2-8354-ee0273f8a82c",
+    },
+  ],
+  "observability": { "enabled": false },
+}

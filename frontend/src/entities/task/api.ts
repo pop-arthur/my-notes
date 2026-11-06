@@ -17,9 +17,7 @@ export const taskOptions = (userId: string) =>
 export const taskApi = {
   create: (body: components["schemas"]["CreateTaskRequest"]) =>
     api.mutate<Task>("/api/tasks", "POST", body),
-  // OpenAPI omits title updates. Confirmed by backend UpdateTaskRequest + TaskService.
-  // Derive field types from generated Task; do not edit the generated schema or backend.
-  update: (id: string, body: Partial<Pick<Task, "title" | "completed">>) =>
+  update: (id: string, body: components["schemas"]["UpdateTaskRequest"]) =>
     api.mutate<Task>(`/api/tasks/${encodeURIComponent(id)}`, "PATCH", body),
   delete: (id: string) =>
     api.mutate<void>(`/api/tasks/${encodeURIComponent(id)}`, "DELETE"),

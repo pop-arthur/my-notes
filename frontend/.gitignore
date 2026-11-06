@@ -6,3 +6,9 @@ test-results/
 *.tsbuildinfo
 .env*
 !.env.example
+
+.open-next/
+.wrangler/
+.dev.vars*
+.next-*/
+!.dev.vars.example

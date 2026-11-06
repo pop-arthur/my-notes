@@ -190,3 +190,11 @@ SMTP sender реализован на Spring Boot Mail; профиль Compose m
 Письма содержат UTF-8 text/plain и text/html. Ссылки на /verify-email и /reset-password формируются из фиксированного конфигурационного origin, не из заголовков запроса. Отправка после commit, ошибки не раскрывают письмо/credentials; повторная отправка заменяет токен. Google callback выводится из того же origin; явный GOOGLE_REDIRECT_URI поддержан с проверкой соответствия.
 
 Согласован будущий вариант размещения: Cloudflare Worker для frontend и проксирования API, внешний Spring Boot и PostgreSQL. Домен, SMTP-аккаунт и Google credentials ещё не предоставлены; создание платных ресурсов и реальный deploy не выполняются. API и схема БД не меняются.
+
+## Размещение и текущие границы готовности
+
+Frontend публикуется через OpenNext в Cloudflare Workers на стабильном workers.dev URL.
+Spring Boot/PostgreSQL размещены на VPS; Worker подключается только к backend через
+VPC Service и именованный Tunnel. Прямой fetch Worker к IP не используется.
+Публичный origin един для браузера, писем и Google callback. Детали эксплуатации и
+оставшаяся настройка Google Web client/SMTP — [Cloudflare deployment](cloudflare-deployment.md).

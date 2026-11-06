@@ -37,7 +37,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.*;
 
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
-@SpringBootTest(properties = {"app.mail.enabled=false", "app.oauth.google.enabled=false", "app.public-origin="})
+@SpringBootTest(properties = {"app.proxy.secret=","app.mail.enabled=false", "app.oauth.google.enabled=false", "app.public-origin="})
 @Testcontainers
 @Import(ServiceIT.TestBeans.class)
 class ServiceIT {

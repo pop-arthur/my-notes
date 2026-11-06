@@ -6,6 +6,9 @@ export default defineConfig([
   ...nextTs,
   globalIgnores([
     ".next/**",
+    ".next-*/**",
+    ".open-next/**",
+    ".wrangler/**",
     "playwright-report/**",
     "test-results/**",
     "src/shared/api/schema.d.ts",

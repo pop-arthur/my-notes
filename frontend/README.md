@@ -17,7 +17,13 @@ npm run dev
 
 `BACKEND_ORIGIN` — серверный origin Spring для OAuth navigation handlers и локальных API rewrites. В разработке по умолчанию `http://127.0.0.1:8080`; в production переменная обязательна для Google-входа. Браузер всегда обращается к относительным путям того же origin. Публичных секретов и `NEXT_PUBLIC_*` переменных нет.
 
-В production `npm run build && npm start`. HTTPS ingress должен направлять `/api/*` прямо в Spring, остальные пути, включая `/oauth2/authorization/google` и `/login/oauth2/code/google`, — в Next. Backend отключает CORS: разные origin без изменений инфраструктуры не поддерживаются. Два узких Node.js route handlers передают OAuth-переходы существующему backend один раз, сохраняют session cookies и разрешённые редиректы; аутентификацию, state/nonce и ID token по-прежнему проверяет Spring. Ошибки JSON/HTML, timeout и недоступность backend превращаются в переход на страницу входа с безопасным сообщением. Это необходимое исключение для браузерной навигации; остальной API не проксируется приложением в production. Для Google callback укажите URL общего origin, например `https://your-domain/login/oauth2/code/google`; конфигурация OAuth находится только в backend.
+В production frontend работает как Cloudflare Worker через OpenNext. `/api/*` и
+`/actuator/health` передаются через фиксированный VPC Service в Spring Boot; страницы
+и Google start/callback обслуживает Next. OAuth handlers используют тот же VPC transport,
+сохраняют cookie и разрешённые редиректы; JWT/state/nonce проверяет Spring.
+BACKEND_ORIGIN используется только для обычного локального Next, без VPC.
+Сайт и API имеют один origin; CORS в backend закрыт.
+Подробности: [Cloudflare deployment](../docs/cloudflare-deployment.md).
 
 ## Страницы и API
 
@@ -60,8 +66,8 @@ Vitest проверяет граничную валидацию Unicode, cookie/
 
 ## Ограничения интеграции
 
-- OpenAPI описывает только `completed` в PATCH; текущий `backend/.../tasks/http/dto/UpdateTaskRequest.java` и `TaskController` подтверждают также `title`. Frontend использует существующую возможность, типы полей выводятся из сгенерированного Task. Backend и OpenAPI не изменялись.
-- Реальная почтовая доставка в backend ещё отсутствует: формы корректно показывают `503 mail_delivery_unavailable` / `mail_delivery_failed`, не подменяя их успехом.
+- OpenAPI 0.2.0 поддерживает PATCH title/completed; frontend использует generated UpdateTaskRequest. Gateway 502 описан в контракте.
+- SMTP-адаптер реализован; production SMTP пока выключен: формы корректно показывают `503 mail_delivery_unavailable` / `mail_delivery_failed`, не подменяя их успехом.
 - Google требует настройки backend credentials. Без неё backend возвращает `503 google_unavailable`; браузерный обработчик возвращает пользователя на `/login?error=google_unavailable`, не показывая JSON. OAuth невозможно завершить одной настройкой frontend.
 - Figma Starter ограничил чтение части состояний. Основные экраны, палитра, шкалы, мобильные задачи и редактор получены; недоступные варианты адаптированы на основе полученных компонентов. Полное визуальное совпадение всех недоступных состояний не подтверждено.
 
@@ -70,3 +76,18 @@ Vitest проверяет граничную валидацию Unicode, cookie/
 Google-вход и регистрация используют общий `/oauth2/authorization/google`. Его browser handler и callback handler `/login/oauth2/code/google` передают только существующие Google-маршруты backend, session cookie и документированные callback-параметры. Исходящий запрос не следует редиректам автоматически: браузер получает разрешённый Google redirect и все Set-Cookie; callback допускает только `/` и `/login?error=oauth_failed`. Ошибки 429 сохраняют безопасный Retry-After как время ожидания. Произвольные URL, JSON/HTML ошибок, OAuth code/state и детали исключений не попадают на экран ошибки. В dev отключён access logging для callback и email-ссылок с токенами. На внешнем ingress также исключить query этих маршрутов из журналов.
 
 Проверены остальные UI-переходы: ссылки ведут на HTML-страницы; email-вход, регистрация, подтверждение, resend и восстановление используют API-клиент и безопасные Notice. Тесты `errors.spec.ts` проверяют недоступность сети, 429, JSON 4xx/5xx и HTML ошибки на всех шести auth-формах. OAuth navigation отдельно проверяется с upstream mocks (включая сохранение cookie и штатного redirect), а отключённый Google — в реальном браузере.
+
+## Cloudflare Workers / VPS
+
+Сайт: https://my-notes.pop-arthur-c189baa0.workers.dev.
+Deployment: `npm run worker:deploy`; preview: `npm run worker:preview`.
+Сначала проверить `npm run worker:build`, `npm run test:worker`, `npm run worker:check`.
+Worker передаёт API/health в закрытый Spring Boot через BACKEND VPC Service и Tunnel;
+OAuth handlers тоже используют binding. BACKEND_ORIGIN нужен для обычного локального Next.
+Подробности, обновление/откат и оставшаяся настройка Google/SMTP:
+[Cloudflare deployment](../docs/cloudflare-deployment.md).
+
+`npm run test:integration` запускает отдельные временные PostgreSQL/Mailpit, Spring Boot
+на 18080 и Next на 3200, Mailpit API на 18025. Нужны Docker, Java 21 и Chromium Playwright.
+Локальная БД и .env не используются; контейнеры удаляются при завершении.
+Тесты работают на desktop/mobile; не запускать браузерные проверки параллельно.

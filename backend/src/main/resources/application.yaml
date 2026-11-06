@@ -30,6 +30,8 @@ management:
       probes:
         enabled: false
 app:
+  proxy:
+    secret: ${EDGE_PROXY_SECRET:}
   public-origin: ${APP_PUBLIC_ORIGIN:}
   mail:
     enabled: ${MAIL_ENABLED:false}

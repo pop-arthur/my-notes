@@ -21,13 +21,13 @@ Docker Engine и Compose установлены через [официальны
 
 Backend публикуется только на `127.0.0.1:8080`, у PostgreSQL вообще нет port mapping. UFW: incoming deny, outgoing allow; SSH 22 разрешён, 5432/8080 закрыты для IPv4 и IPv6. Docker может обходить обычные UFW-правила при публикации портов: не добавлять внешние mappings в Compose. Не изменены SSH-порт и root login.
 
-SMTP и Google выключены явно в Compose. `APP_PUBLIC_ORIGIN` и callback не заданы. Почтовые сценарии и Google возвращают 503, фиктивных аккаунтов/успеха нет. Вход с email возможен только для уже подтверждённого пользователя; на чистой БД нет пользователей. Cookie Secure остаётся включённым; профиль local не используется.
+SMTP и Google по умолчанию выключены; включение управляется production env. `APP_PUBLIC_ORIGIN` и callback не заданы. Почтовые сценарии и Google возвращают 503, фиктивных аккаунтов/успеха нет. Вход с email возможен только для уже подтверждённого пользователя; на чистой БД нет пользователей. Cookie Secure остаётся включённым; профиль local не используется.
 
 ## Первичная установка файлов
 
 Перед повторной установкой проверять ОС, сервисы, порты, firewall и существующие файлы. Не перезаписывать env, не удалять volume. Установка пакетов — по официальной инструкции выше. Образам нужны Docker Hub, а сборке — Maven Central.
 
-Передать `backend/` без `.env`, `target`, IDE-файлов и секретов в `/opt/my-notes/backend`. Шаблон `backend/deploy/.env.example` содержит только заглушки. Сгенерировать на VPS два независимых пароля (`openssl rand -hex 32`), записать в `/etc/my-notes/production.env`, не выводя их. Не использовать `set -x`, `docker compose config` без `--quiet` или `docker inspect` целиком: они могут раскрыть env. Доступ к Docker/root равнозначен доступу к секретам.
+Передать `backend/` без `.env`, `target`, IDE-файлов и секретов в `/opt/my-notes/backend`. Шаблон `backend/deploy/.env.example` содержит только заглушки. Сгенерировать на VPS три независимых значения DB_ADMIN_PASSWORD, DB_PASSWORD и EDGE_PROXY_SECRET (`openssl rand -hex 32`), записать в `/etc/my-notes/production.env`, не выводя их. Не использовать `set -x`, `docker compose config` без `--quiet` или `docker inspect` целиком: они могут раскрыть env. Доступ к Docker/root равнозначен доступу к секретам.
 
 Установка команд и таймера (root, на сервере):
 
@@ -130,30 +130,15 @@ my-notes-compose exec -T postgres pg_restore -U postgres \
 
 **Локальные копии на том же VPS не являются полноценным бэкапом.** Нужна отдельная внешняя площадка, шифрование, ограниченный доступ, retention, контроль успешной доставки и периодические restore drills. Внешнее хранилище не создавалось и не оплачено.
 
-## Что нужно для публичного запуска
+## Cloudflare и публичный запуск
 
-- Домен общего сайта и точный HTTPS `APP_PUBLIC_ORIGIN`.
-- HTTPS endpoint backend/origin для Worker, сертификат и выбранное ограничение доступа к origin; TLS до VPS нельзя заменять открытым HTTP.
-- Отдельное решение о reverse proxy/TLS и доверии forwarded-заголовкам. Текущий rate limit видит socket IP: при Worker без адаптации все посетители разделят один лимит. Не включать доверие произвольным заголовкам.
-- Worker routes: API, CSRF и OAuth callback на Spring, корректная передача cookie и запрет кэширования приватных ответов. Cloudflare сейчас не менялся.
-- Для Google: client ID/secret, consent screen и точный `APP_PUBLIC_ORIGIN/login/oauth2/code/google`, при необходимости явный GOOGLE_REDIRECT_URI.
-- Для почты: SMTP host/port/TLS mode, username/password, разрешённый MAIL_FROM и настройки домена отправителя. Включать MAIL_ENABLED/GOOGLE_OAUTH_ENABLED в Compose только после полной конфигурации.
-- Внешнее хранилище резервных копий и мониторинг. До появления этих настроек оставить backend на loopback, доступ — SSH-туннель.
+Публичный сайт размещён на workers.dev. Backend закрыт на loopback; Worker связан с ним
+через один HTTP VPC Service и постоянный Cloudflare Tunnel. Покупка домена и IP-сертификат
+не требуются. Детали, команды проверки и оставшиеся Google/SMTP настройки:
+[Cloudflare deployment](cloudflare-deployment.md).
 
-Секреты SMTP/Google сохраняются только в серверном окружении, не в Worker, frontend или Git. Домены и платные ресурсы в рамках подготовки не создаются.
-
-## Результаты первоначальной проверки — 6 ноября 2026
-
-- Docker Engine 29.9.3, Compose 5.7.0, автозапуск Docker/containerd включён.
-- Backend: Java 21.0.13, Spring Boot 4.1.2, профиль production, UID/GID 10001; PostgreSQL 18.6. Оба контейнера healthy.
-- Flyway V1/V2/V3 применены успешно; Hibernate validation прошла при запуске. Роль my_notes без superuser/createdb/createrole.
-- Локально `./mvnw verify`: 28 unit/architecture + 56 integration тестов, 0 ошибок, 0 пропусков.
-- Smoke check выполнен на VPS и через настоящий SSH-туннель: health/CSRF 200, защищённое чтение 401, POST без CSRF 403, POST с CSRF без входа 401, отключённые mail/Google 503. Проверены Secure/HttpOnly/SameSite=Lax и no-store.
-- Внешние протокольные запросы к 5432/8080 не получают ответа; DROP-счётчики UFW выросли. На хосте backend слушает только 127.0.0.1:8080, PostgreSQL не опубликован. Повторный SSH-вход работает.
-- Первый custom-format pg_dump восстановлен в отдельную временную БД; проверены три успешные миграции и таблицы users/tasks/spring_session. Пользователей и задач в исходной БД ещё нет, поэтому проверено восстановление схемы без реальных пользовательских данных. Временная БД удалена.
-- Backup service Result=success, timer включён; env и архив имеют права 600. Следующий ежедневный запуск — 7 ноября, 03:15 UTC с задержкой до пяти минут.
-- После размещения свободно около 3,8 ГБ; контейнеры занимают примерно 290 МБ (backend) и 58 МБ (Postgres). С ростом данных и числа образов контролировать диск.
-
-Развёрнутый образ backend: `sha256:84224962652529be6d43c6b45eefd3d776fb5cebd93b6294ed1694f274e46b0e`. PostgreSQL image digest: `postgres@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42`. Это запись первоначального развёртывания; при обновлении зафиксировать новые значения.
-
-Текущий VPS использует `compose.vps.yaml`: конфигурацию без Worker, SMTP и Google. Параллельные изменения `compose.production.yaml` и TrustedProxyFilter для будущего edge-прокси не переносились на VPS. Результаты тестов и image digest выше относятся к снимку backend, собранному до этих параллельных изменений; перед следующим выпуском повторить verify для актуального кода.
+При включённом EDGE_PROXY_SECRET прямые API-запросы через SSH-туннель без собственных
+доверенных заголовков возвращают 403. Это ожидаемая защита origin; GET health остаётся 200.
+Публичный Worker добавляет проверяемый секрет и IP клиента; forwarded-заголовкам не доверять.
+Секрет не выводить при curl, compose config или inspect. Для end-to-end проверок использовать
+публичный сайт и CSRF одной сессии. Внешнее хранилище бэкапов пока не подключено.

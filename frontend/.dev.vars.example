@@ -1,0 +1,3 @@
+# Server-side VPC preview only. Use the same edge secret as your preview backend.
+# Never use NEXT_PUBLIC_ and never put SMTP/Google credentials here.
+EDGE_PROXY_SECRET=REPLACE_WITH_THE_PROVISIONED_EDGE_SECRET

@@ -34,7 +34,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"app.proxy.secret=",
         "app.mail.enabled=false", "app.public-origin=", "app.session.cookie-secure=false", "app.oauth.google.enabled=true", "app.oauth.google.client-id=test-client",
         "app.oauth.google.client-secret=test-secret", "app.oauth.google.redirect-uri=http://localhost:8080/login/oauth2/code/google",
         "app.rate-limit.google=1000", "app.rate-limit.csrf=1000"})

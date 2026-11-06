@@ -45,7 +45,7 @@ class SessionPersistenceIT {
     }
     ConfigurableApplicationContext start() {
         return new SpringApplicationBuilder(MyNotesApplication.class).profiles("test").run(
-                "--app.mail.enabled=false", "--app.public-origin=", "--server.port=0", "--app.session.cookie-secure=false", "--app.oauth.google.enabled=false",
+                "--app.proxy.secret=", "--app.mail.enabled=false", "--app.public-origin=", "--server.port=0", "--app.session.cookie-secure=false", "--app.oauth.google.enabled=false",
                 "--spring.datasource.url=" + POSTGRES.getJdbcUrl(), "--spring.datasource.username=" + POSTGRES.getUsername(),
                 "--spring.datasource.password=" + POSTGRES.getPassword());
     }
