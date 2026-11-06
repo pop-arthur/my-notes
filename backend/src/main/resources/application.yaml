@@ -30,6 +30,15 @@ management:
       probes:
         enabled: false
 app:
+  public-origin: ${APP_PUBLIC_ORIGIN:}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:0}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    from: ${MAIL_FROM:}
+    tls-mode: ${SMTP_TLS_MODE:starttls}
   session:
     cookie-secure: true
   oauth:

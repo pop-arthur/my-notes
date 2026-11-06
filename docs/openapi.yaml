@@ -3,7 +3,7 @@ info:
   title: To-Do List API
   version: 0.2.0
   description: 'Реализованный HTTP API. Сессии хранятся в PostgreSQL; Google OAuth включается настройками окружения.
-    Production-почтовый адаптер пока отсутствует: почтовые сценарии без него дают 503. Google или email + пароль,
+    SMTP-адаптер включается настройками окружения; без включённого sender почтовые сценарии дают 503. Google или email + пароль,
     личные задачи. Cookie-based сессии, без JWT в localStorage. Все JSON-объекты запросов запрещают неизвестные
     поля. Данные пользователя и токены не кэшировать (Cache-Control: no-store). Все POST/PATCH/DELETE требуют
     X-CSRF-TOKEN и cookie сессии, включая анонимные auth-запросы; сначала GET /api/auth/csrf. На чтении защищённых

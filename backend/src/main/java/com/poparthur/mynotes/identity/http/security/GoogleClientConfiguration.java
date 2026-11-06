@@ -1,6 +1,7 @@
 package com.poparthur.mynotes.identity.http.security;
 
 import java.net.URI;
+import com.poparthur.mynotes.shared.service.PublicOrigin;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,11 +21,23 @@ public class GoogleClientConfiguration {
     ClientRegistrationRepository googleClients(@Value("${app.oauth.google.client-id:}") String clientId,
                                                @Value("${app.oauth.google.client-secret:}") String secret,
                                                @Value("${app.oauth.google.redirect-uri:}") String redirect,
-                                               Environment environment) {
-        if (clientId.isBlank() || secret.isBlank() || redirect.isBlank()) {
-            throw new IllegalStateException("Google OAuth requires client ID, secret and redirect URI");
+                                               Environment environment, PublicOrigin origin) {
+        if (clientId.isBlank() || secret.isBlank()) {
+            throw new IllegalStateException("Google OAuth requires client ID and secret");
         }
-        URI uri = URI.create(redirect);
+        if (redirect.isBlank()) {
+            redirect = origin.require().resolve("/login/oauth2/code/google").toASCIIString();
+        }
+        URI uri;
+        try {
+            uri = URI.create(redirect);
+        } catch (IllegalArgumentException invalid) {
+            throw new IllegalStateException("Invalid Google redirect URI");
+        }
+        if (origin.configured().isPresent()
+                && !origin.require().resolve("/login/oauth2/code/google").equals(uri)) {
+            throw new IllegalStateException("GOOGLE_REDIRECT_URI must match APP_PUBLIC_ORIGIN");
+        }
         boolean local = environment.acceptsProfiles(Profiles.of("local", "test"));
         if (uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null
                 || !"/login/oauth2/code/google".equals(uri.getPath())

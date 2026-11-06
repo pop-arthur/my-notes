@@ -165,11 +165,11 @@ TaskService реализует валидацию и операции задач
 
 Email нормализуется через Locale.ROOT, пароли не нормализуются и не усекаются, их длина считается по Unicode code points. PasswordEncoder — DelegatingPasswordEncoder с PBKDF2 Spring Security v5_8. UUID и UTC-время внедряются; время приводится к микросекундам PostgreSQL.
 
-Почта представлена только IdentityMailSender без production-реализации. При отсутствии sender почтовые сценарии явно недоступны до чтения аккаунтов и записи данных. Тестовый перехватчик проверяет, что токен закоммичен до отправки. Ошибка sender не откатывает сохранённые данные; повторная отправка заменяет токен. Гарантированная очередь доставки не реализована.
+IdentityMailSender имеет SMTP-реализацию на JavaMailSender, включаемую MAIL_ENABLED. При отсутствии sender почтовые сценарии явно недоступны до чтения аккаунтов и записи данных. Тестовый перехватчик проверяет, что токен закоммичен до отправки. Ошибка sender не откатывает сохранённые данные; повторная отправка заменяет токен. Гарантированная очередь доставки не реализована.
 
 Миграция V2 добавляет auth_version. Сброс пароля атомарно меняет credentials, погашает токены и увеличивает версию. HTTP/security проверяет версию на каждом запросе и очищает старые JDBC-сессии после commit. VerifiedGoogleIdentity — внутренний доверенный ввод, а не проверка JWT и не публичный запрос.
 
-HTTP API, security-интеграция и rate limiting реализованы; для обычной email-регистрации ещё нужен почтовый адаптер, для рабочего сайта — frontend.
+HTTP API, security-интеграция, rate limiting и SMTP-адаптер реализованы; для production нужны публичный origin и credentials почты/Google.
 
 ## HTTP/security: реализованный этап
 
@@ -179,6 +179,14 @@ Spring Session JDBC хранит локальную identity и SecurityContext 
 
 Google включается credentials и callback URL через окружение; JWT/state/nonce проверяет Spring Security, в сессию переносится только локальная identity. В тестах используется локальный подписывающий провайдер, не настоящий Google.
 
-Production-почтового адаптера по-прежнему нет: почтовые маршруты без sender дают 503, без фиктивного успеха. Доставка с настроенным sender происходит после commit; при её ошибке сохранённые данные остаются. Для обычной email-регистрации остаётся подключить SMTP/другую реализацию IdentityMailSender. Frontend и его страницы OAuth-редиректов остаются следующим этапом.
+SMTP-адаптер реализован и выключен по умолчанию; почтовые маршруты без включённого sender дают 503, без фиктивного успеха. Доставка с настроенным sender происходит после commit; при её ошибке сохранённые данные остаются. Для production email-регистрации нужно настроить SMTP credentials и APP_PUBLIC_ORIGIN. Frontend и его страницы OAuth-редиректов остаются следующим этапом.
 
 Ошибки фильтров и MVC единообразны (Problem Details), API не кэшируется, health не раскрывает детали. Auth-маршруты ограничены по socket IP с bounded Caffeine cache; CORS закрыт, forwarded-заголовки не доверяются. Команды и переменные описаны в backend README.
+
+## SMTP и подготовка production origin
+
+SMTP sender реализован на Spring Boot Mail; профиль Compose mail поднимает Mailpit v1.31.1 с loopback-портами 1025/8025. MAIL_ENABLED=false по умолчанию сохраняет прежний 503; локальный .env.example включает почту для Mailpit. В production обязательны SMTP host, credentials, корректный From, TLS и HTTPS APP_PUBLIC_ORIGIN. Тайм-ауты — по 5 секунд, mail debug выключен.
+
+Письма содержат UTF-8 text/plain и text/html. Ссылки на /verify-email и /reset-password формируются из фиксированного конфигурационного origin, не из заголовков запроса. Отправка после commit, ошибки не раскрывают письмо/credentials; повторная отправка заменяет токен. Google callback выводится из того же origin; явный GOOGLE_REDIRECT_URI поддержан с проверкой соответствия.
+
+Согласован будущий вариант размещения: Cloudflare Worker для frontend и проксирования API, внешний Spring Boot и PostgreSQL. Домен, SMTP-аккаунт и Google credentials ещё не предоставлены; создание платных ресурсов и реальный deploy не выполняются. API и схема БД не меняются.

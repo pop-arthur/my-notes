@@ -30,7 +30,7 @@ import static com.poparthur.mynotes.identity.repo.entity.TokenPurpose.*;
 import static org.assertj.core.api.Assertions.*;
 
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
-@SpringBootTest
+@SpringBootTest(properties = {"app.mail.enabled=false", "app.oauth.google.enabled=false", "app.public-origin="})
 @Testcontainers
 class RepositoryIT {
     @Container
