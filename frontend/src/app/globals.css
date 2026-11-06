@@ -1,0 +1,85 @@
+@import "@fontsource-variable/inter";
+@import "tailwindcss";
+
+/* Figma variables: bvF8q21cAlNXfUgkrbqQHP, page 0:1. */
+:root {
+  --background: #f8f9fc;
+  --foreground: #182033;
+  --card: #ffffff;
+  --muted: #eef0f4;
+  --muted-foreground: #5e687c;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-foreground: #ffffff;
+  --border: #dce1ea;
+  --destructive: #b42332;
+  --success: #23724b;
+  --error-surface: #fdf0f1;
+  --success-surface: #eff8f3;
+  --info-surface: #eeedff;
+  --ring: #4f46e5;
+  --radius: 0.5rem;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-error-surface: var(--error-surface);
+  --color-success-surface: var(--success-surface);
+  --color-info-surface: var(--info-surface);
+  --color-ring: var(--ring);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --font-sans: "Inter Variable", Inter, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2rem;
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans text-sm;
+    line-height: 1.5;
+  }
+  button,
+  a,
+  input,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:not(:disabled),
+  [role="checkbox"]:not(:disabled) {
+    cursor: pointer;
+  }
+  a,
+  button,
+  input,
+  textarea {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+  ::selection {
+    @apply bg-info-surface;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
