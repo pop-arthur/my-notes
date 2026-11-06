@@ -36,34 +36,33 @@ export function CreateTaskForm({
       })}
       className="space-y-2"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1">
-          <Field
-            id="new-task"
-            label="Новая задача"
-            error={form.formState.errors.title?.message}
-          >
-            <Input
-              {...form.register("title")}
-              {...fieldAccessibility(
-                "new-task",
-                form.formState.errors.title?.message,
-              )}
-              aria-describedby={[
-                "task-hint",
-                form.formState.errors.title && "new-task-error",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              placeholder="Что нужно сделать?"
-              disabled={mutation.isPending}
-            />
-          </Field>
+      <Field
+        id="new-task"
+        label="Новая задача"
+        error={form.formState.errors.title?.message}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <Input
+            {...form.register("title")}
+            {...fieldAccessibility(
+              "new-task",
+              form.formState.errors.title?.message,
+            )}
+            aria-describedby={[
+              "task-hint",
+              form.formState.errors.title && "new-task-error",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            placeholder="Что нужно сделать?"
+            disabled={mutation.isPending}
+            className="min-w-0 sm:flex-1"
+          />
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Добавляем…" : "Добавить"}
+          </Button>
         </div>
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Добавляем…" : "Добавить"}
-        </Button>
-      </div>
+      </Field>
       <p id="task-hint" className="text-xs text-muted-foreground">
         Enter — добавить · От 1 до 200 символов
       </p>

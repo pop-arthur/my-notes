@@ -101,13 +101,24 @@ test("registration, verification, recovery and password reset", async ({
   await expect(
     page.getByRole("heading", { name: "Проверьте почту" }),
   ).toBeVisible();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await expect(
+    page.getByText("anna.petrova@example.ru", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Отправить письмо повторно" }).click();
   await expect(
     page.getByText(
-      "Если действие доступно для этого адреса, письмо будет отправлено.",
+      "Запрос принят. Проверьте входящие и папку «Спам». Письмо может прийти через несколько минут.",
       { exact: true },
     ),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Изменить email", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Создать аккаунт" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Email", { exact: true })).toBeEditable();
   await page.goto("/verify-email?token=valid-token");
   await page.getByRole("button", { name: "Подтвердить почту" }).click();
   await expect(

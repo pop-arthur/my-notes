@@ -29,9 +29,10 @@ const cases = [
     message: "Не удалось связаться с сервером",
   },
   {
-    path: "/check-email",
+    path: "/register",
+    registerFirst: true,
     endpoint: "/api/auth/resend-verification",
-    inputs: { Email: "test@example.com" },
+    inputs: { Email: "test@example.com", Пароль: "correct-password" },
     submit: "Отправить письмо повторно",
     status: 429,
     code: "rate_limited",
@@ -58,9 +59,7 @@ const cases = [
 ];
 
 for (const scenario of cases) {
-  test(`handles API failure inside ${scenario.path.split("?")[0]}`, async ({
-    page,
-  }) => {
+  test(`handles API failure from ${scenario.endpoint}`, async ({ page }) => {
     await mockApi(page);
     await page.route(`**${scenario.endpoint}`, async (route) => {
       if (scenario.network) return route.abort("failed");
@@ -80,6 +79,14 @@ for (const scenario of cases) {
     await page.goto(scenario.path);
     for (const [label, value] of Object.entries(scenario.inputs)) {
       await page.getByLabel(label, { exact: true }).fill(value);
+    }
+    if ("registerFirst" in scenario) {
+      await page
+        .getByRole("button", { name: "Создать аккаунт", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Проверьте почту" }),
+      ).toBeVisible();
     }
     await page
       .getByRole("button", { name: scenario.submit, exact: true })

@@ -14,7 +14,12 @@ export function CredentialsPage({ mode }: { mode: "login" | "register" }) {
           title="Проверьте почту"
           description="Откройте письмо и перейдите по ссылке, чтобы подтвердить адрес."
         />
-        <VerificationWaiting initialEmail={pendingEmail} />
+        <VerificationWaiting
+          initialEmail={pendingEmail}
+          onChangeEmail={
+            mode === "register" ? () => setPendingEmail(undefined) : undefined
+          }
+        />
       </>
     );
   const register = mode === "register";

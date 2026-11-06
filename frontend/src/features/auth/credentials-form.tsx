@@ -108,8 +108,11 @@ export function CredentialsForm({
         <ApiErrorNotice error={mutation.error} />
         {mutation.error instanceof ApiError &&
           mutation.error.code === "email_not_verified" && (
-            <Button asChild variant="outline">
-              <Link href="/check-email">Подтвердить почту</Link>
+            <Button
+              variant="outline"
+              onClick={() => onRegistered?.(form.getValues("email"))}
+            >
+              Подтвердить почту
             </Button>
           )}
         <Button
