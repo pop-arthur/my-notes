@@ -1,7 +1,7 @@
 # Cloudflare Workers + приватный backend на VPS
 
 Публичный сайт: **https://my-notes.pop-arthur-c189baa0.workers.dev**.
-Backend и PostgreSQL работают на VPS `31.59.45.10`. Сайт обращается к API того же origin;
+Backend и PostgreSQL работают на VPS `<VPS_IP>`. Сайт обращается к API того же origin;
 Worker передаёт API/health через HTTP VPC Service и именованный Cloudflare Tunnel.
 Прямой публичный HTTP-доступ к backend и PostgreSQL закрыт. Сертификат на IP не используется.
 
@@ -91,7 +91,7 @@ Wrangler авторизация — `npx wrangler login --device`. Account/Servi
 ## VPS, Tunnel и резервные копии
 
 ```sh
-ssh root@31.59.45.10
+ssh root@"<VPS_IP>"
 my-notes-compose ps
 curl -fsS http://127.0.0.1:8080/actuator/health
 systemctl status my-notes-tunnel
@@ -184,3 +184,25 @@ SMTP_PORT=587, SMTP_TLS_MODE=starttls. MAIL_FROM совпадает с SMTP_USER
 
 Настоящий Google-вход и authenticated CRUD на публичном сайте остаются непроверенными
 до настройки OAuth credentials. Статус SMTP обновлён в разделе выше. Полные публичные сценарии email-подтверждения и сброса пароля пока не проверены.
+
+
+## Resend (HTTPS вместо SMTP)
+
+На VPS можно выбрать `MAIL_PROVIDER=resend` при `MAIL_ENABLED=true`.
+Задайте `RESEND_API_KEY` (отдельный ключ с правом отправки),
+`AUTH_FROM_EMAIL` (например `My Notes <noreply@your-domain.example>`) и
+`APP_PUBLIC_ORIGIN=https://my-notes.pop-arthur-c189baa0.workers.dev`.
+Домен отправителя должен быть подтверждён в Resend. Ключ хранится только
+в окружении backend, не в Worker и не в Git. Maven не загружает `.env` автоматически.
+
+Адаптер обращается к https://api.resend.com/emails с тайм-аутами 5 секунд,
+без редиректов и автоматических повторов отправки. Используются существующие
+UTF-8 text/html шаблоны, ссылки `/verify-email?token=…` и `/reset-password?token=…`.
+Токены, PostgreSQL, сессии и API остаются прежними; отправка выполняется после commit.
+Ошибки сохраняют коды `mail_delivery_unavailable` / `mail_delivery_failed`.
+Без ключа/отправителя включённый Resend останавливает запуск с безопасной ошибкой.
+`MAIL_ENABLED=false` отключает sender и сохраняет предусмотренный 503.
+Для Mailpit и прежнего SMTP используйте `MAIL_PROVIDER=smtp` (по умолчанию).
+
+Переключение production ожидает нового подтверждённого отправителя и ключа;
+реальная доставка через Resend пока не проверена.

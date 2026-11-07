@@ -17,6 +17,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 @EnableConfigurationProperties(SmtpSettings.class)
 public class SmtpConfiguration {
     @Bean
+    @ConditionalOnProperty(name = "app.mail.provider", havingValue = "smtp", matchIfMissing = true)
     JavaMailSender smtpTransport(SmtpSettings settings, PublicOrigin origin, Environment environment) {
         boolean local = environment.acceptsProfiles(Profiles.of("local", "test"));
         origin.require();
@@ -59,6 +60,7 @@ public class SmtpConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "app.mail.provider", havingValue = "smtp", matchIfMissing = true)
     IdentityMailSender smtpIdentityMailSender(JavaMailSender transport, SmtpSettings settings, PublicOrigin origin) {
         return new SmtpIdentityMailSender(transport, settings.from(), new IdentityMailTemplate(origin));
     }

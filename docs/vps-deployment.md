@@ -2,7 +2,7 @@
 
 ## Размещение
 
-VPS `31.59.45.10`, SSH `root`, порт 22. Ubuntu 24.04, 1 vCPU, около 1 ГБ RAM, диск около 10 ГБ. Добавлен swap 1 ГБ (`/swapfile`, запись в `/etc/fstab`). Это минимальный стенд: перед реальной нагрузкой пересмотреть RAM и диск.
+VPS `<VPS_IP>`, SSH `root`, порт 22. Ubuntu 24.04, 1 vCPU, около 1 ГБ RAM, диск около 10 ГБ. Добавлен swap 1 ГБ (`/swapfile`, запись в `/etc/fstab`). Это минимальный стенд: перед реальной нагрузкой пересмотреть RAM и диск.
 
 - Исходники и production Compose: `/opt/my-notes/backend/`.
 - Конфигурация: `/etc/my-notes/production.env`, root:root, `600`, каталог `700`.
@@ -48,7 +48,7 @@ systemctl enable --now my-notes-backup.timer
 На своём компьютере:
 
 ```sh
-ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:18080:127.0.0.1:8080 root@31.59.45.10
+ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:18080:127.0.0.1:8080 root@"<VPS_IP>"
 ```
 
 В другом терминале:

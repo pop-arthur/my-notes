@@ -216,3 +216,25 @@ Cloudflare Worker подключён к приватному backend через 
 защищает собственный заголовок IP; произвольные forwarded-заголовки не доверенные.
 Без секрета и числового client IP защищённый origin возвращает 403; GET health остаётся публичным.
 Подключение, секреты и Google callback: [Cloudflare deployment](../docs/cloudflare-deployment.md).
+
+
+## Resend (HTTPS вместо SMTP)
+
+На VPS можно выбрать `MAIL_PROVIDER=resend` при `MAIL_ENABLED=true`.
+Задайте `RESEND_API_KEY` (отдельный ключ с правом отправки),
+`AUTH_FROM_EMAIL` (например `My Notes <noreply@your-domain.example>`) и
+`APP_PUBLIC_ORIGIN=https://my-notes.pop-arthur-c189baa0.workers.dev`.
+Домен отправителя должен быть подтверждён в Resend. Ключ хранится только
+в окружении backend, не в Worker и не в Git. Maven не загружает `.env` автоматически.
+
+Адаптер обращается к https://api.resend.com/emails с тайм-аутами 5 секунд,
+без редиректов и автоматических повторов отправки. Используются существующие
+UTF-8 text/html шаблоны, ссылки `/verify-email?token=…` и `/reset-password?token=…`.
+Токены, PostgreSQL, сессии и API остаются прежними; отправка выполняется после commit.
+Ошибки сохраняют коды `mail_delivery_unavailable` / `mail_delivery_failed`.
+Без ключа/отправителя включённый Resend останавливает запуск с безопасной ошибкой.
+`MAIL_ENABLED=false` отключает sender и сохраняет предусмотренный 503.
+Для Mailpit и прежнего SMTP используйте `MAIL_PROVIDER=smtp` (по умолчанию).
+
+Переключение production ожидает нового подтверждённого отправителя и ключа;
+реальная доставка через Resend пока не проверена.

@@ -35,6 +35,9 @@ app:
   public-origin: ${APP_PUBLIC_ORIGIN:}
   mail:
     enabled: ${MAIL_ENABLED:false}
+    provider: ${MAIL_PROVIDER:smtp}
+    resend-api-key: ${RESEND_API_KEY:}
+    resend-from: ${AUTH_FROM_EMAIL:}
     host: ${SMTP_HOST:}
     port: ${SMTP_PORT:0}
     username: ${SMTP_USERNAME:}

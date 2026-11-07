@@ -54,18 +54,20 @@
 - PasswordEncoder: Spring Security Crypto, DelegatingPasswordEncoder с `pbkdf2@SpringSecurity_v5_8`. Пароли не обрезать и не нормализовать; ограничения длины считать по Unicode code points.
 - Регистрация и первый Google-вход используют REQUIRES_NEW через TransactionTemplate. Конфликты уникальности обрабатывать только после rollback, не внутри неуспешной транзакции.
 - При операциях email-токенов соблюдать порядок блокировок: пользователь → токен. После ожидания блокировки пользователя обновлять его состояние из БД.
-- `IdentityMailSender` реализован SMTP-адаптером на JavaMailSender; включение через MAIL_ENABLED (по умолчанию false). Без sender почтовые сценарии явно недоступны до чтения аккаунта; production no-op запрещён. Для разработки используется Mailpit, перехватчики остаются только в тестах.
+- `IdentityMailSender` реализован SMTP-адаптером на JavaMailSender или HTTPS-адаптером Resend (`MAIL_PROVIDER=smtp|resend`, default smtp); включение через MAIL_ENABLED (по умолчанию false). Без sender почтовые сценарии явно недоступны до чтения аккаунта; production no-op запрещён. Для разработки используется Mailpit, перехватчики остаются только в тестах.
 - Выпуск токена и связанные изменения завершают свою транзакцию до вызова sender. Ошибка доставки не отменяет commit; повторная отправка выпускает новый токен. Надёжная очередь доставки пока не реализована.
 - Сброс пароля атомарно увеличивает `auth_version`. HTTP/security-интеграция сверяет версию на каждом аутентифицированном запросе; JDBC-сессии старых версий удаляются после commit сброса.
 - `VerifiedGoogleIdentity` — доверенный внутренний ввод после проверки Google ID token Spring Security, не HTTP request DTO. OAuth flow и проверку JWT этим классом не заменять.
 
-### SMTP и публичный origin
+### SMTP, Resend и публичный origin
 
 - Ссылки писем строить только из APP_PUBLIC_ORIGIN с фиксированными путями /verify-email и /reset-password; не использовать Host/forwarded-заголовки. В production origin — HTTPS без credentials/path/query/fragment; local/test допускают HTTP.
 - При включённой production-почте требовать SMTP host, корректный From и пару username/password. STARTTLS (587) — по умолчанию, implicit TLS (465) — альтернатива; none разрешён только в local/test. Проверку сертификата не отключать, mail debug запрещён; connect/read/write timeout — по 5 секунд.
 - Письма — UTF-8 multipart text/plain + text/html. Токены URL-кодировать, HTML экранировать; ошибки транспорта не должны раскрывать исходное письмо или credentials.
 - Google callback по умолчанию формируется из APP_PUBLIC_ORIGIN. Явный GOOGLE_REDIRECT_URI поддерживается; при одновременной настройке значения должны соответствовать друг другу.
 - Секреты SMTP/Google хранить в окружении внешнего backend-хостинга. Cloudflare Worker обслуживает frontend и проксирует API на Spring; credentials не передавать во frontend/Worker. Деплой и создание внешних платных ресурсов — отдельная задача.
+
+- Resend использует только фиксированный HTTPS endpoint api.resend.com/emails, RESEND_API_KEY и AUTH_FROM_EMAIL из окружения backend; ключ не передавать Worker. Домен From подтверждается в Resend. Тайм-ауты — 5 секунд, без редиректов и автоматических повторов. Ссылки и after-commit поведение общие с SMTP.
 
 ### HTTP и сессии
 

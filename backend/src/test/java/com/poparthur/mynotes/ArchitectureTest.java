@@ -19,11 +19,11 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule servicesDoNotDependOnHttp = noClasses().that().resideInAPackage("..service..")
-            .should().dependOnClassesThat().resideInAPackage("..http..")
+            .should().dependOnClassesThat().resideInAPackage("com.poparthur.mynotes..http..")
             .allowEmptyShould(true);
 
     @ArchTest
-    static final ArchRule httpDoesNotAccessRepositoriesOrEntities = noClasses().that().resideInAPackage("..http..")
+    static final ArchRule httpDoesNotAccessRepositoriesOrEntities = noClasses().that().resideInAPackage("com.poparthur.mynotes..http..")
             .should().dependOnClassesThat().resideInAPackage("..repo..")
             .allowEmptyShould(true);
     @ArchTest
